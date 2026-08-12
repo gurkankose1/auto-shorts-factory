@@ -12,7 +12,7 @@ import numpy as np
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
-from moviepy import VideoFileClip, AudioFileClip, ImageClip, CompositeVideoClip, ColorClip
+from moviepy import VideoFileClip, AudioFileClip, ImageClip, CompositeVideoClip, ColorClip, vfx
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output_videos")
@@ -20,7 +20,7 @@ ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(ASSETS_DIR, exist_ok=True)
 
-# Direct royalty-free Pixabay/Pexels HD vertical stock video URLs
+# Direct HD vertical royalty-free background videos (Roman statues, dark aesthetic, stoic nature)
 STOCK_VIDEO_URLS = [
     "https://cdn.pixabay.com/video/2020/05/25/40149-425149363_large.mp4",
     "https://cdn.pixabay.com/video/2019/04/23/23011-332490807_large.mp4",
@@ -52,7 +52,7 @@ def download_bg_video(url, target_path):
     try:
         print(f"[+] Stok Video Indiriliyor: {url[:50]}...")
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-        resp = requests.get(url, headers=headers, stream=True, timeout=10)
+        resp = requests.get(url, headers=headers, stream=True, timeout=15)
         if resp.status_code == 200:
             with open(target_path, "wb") as f:
                 for chunk in resp.iter_content(chunk_size=1024*1024):
@@ -60,7 +60,7 @@ def download_bg_video(url, target_path):
                         f.write(chunk)
             return target_path
     except Exception as e:
-        print(f"[!] Indirme atlandi, prosedurel arka plana geciliyor: {e}")
+        print(f"[!] Indirme hatasi: {e}")
     return None
 
 def generate_voiceover(text, voice_path):
@@ -142,7 +142,7 @@ def create_video_from_template(template_data, index):
     audio_duration = audio.duration
     print(f"[+] Ses Suresi: {audio_duration:.2f} saniye")
 
-    # 2. Arka Plan Videosu (Indirme veya Prosedurel Hizli Gorsel)
+    # 2. Arka Plan Videosu
     bg_url = STOCK_VIDEO_URLS[index % len(STOCK_VIDEO_URLS)]
     downloaded_file = download_bg_video(bg_url, bg_video_path)
 
@@ -151,8 +151,8 @@ def create_video_from_template(template_data, index):
         try:
             raw_clip = VideoFileClip(downloaded_file)
             if raw_clip.duration < audio_duration:
-                sub_d = min(raw_clip.duration, audio_duration)
-                bg_clip = raw_clip.subclipped(0, sub_d)
+                # Repeat video loop using vfx.Loop
+                bg_clip = raw_clip.with_effects([vfx.Loop(duration=audio_duration)])
             else:
                 bg_clip = raw_clip.subclipped(0, audio_duration)
 
@@ -166,18 +166,20 @@ def create_video_from_template(template_data, index):
             y_center = (h_new - target_h) / 2
             bg_clip = bg_clip.cropped(x1=x_center, y1=y_center, width=target_w, height=target_h)
             bg_clip = bg_clip.with_duration(audio_duration)
+            print("[+] Stok Arka Plan Videosu Basariyla Enjekte Edildi!")
         except Exception as e:
-            print(f"[!] Video dosya okuma uyarisi ({e}), ultra-hizli YZ arka plana geciliyor...")
+            print(f"[!] Video isleme hatasi: {e}")
             bg_clip = None
 
     if bg_clip is None:
+        print("[!] Prosedurel koyu gradyan arka plana geciliyor...")
         bg_arr = make_procedural_bg_image(style_index=index)
         bg_clip = ImageClip(bg_arr).with_duration(audio_duration)
 
     overlay_clips = [bg_clip]
 
-    # Karartma Katmani
-    dark_overlay = ColorClip(size=(1080, 1920), color=(0, 0, 0)).with_opacity(0.30).with_duration(audio_duration)
+    # Sinematik Karartma Katmani (Okunabilirlik icin %35 Opacity)
+    dark_overlay = ColorClip(size=(1080, 1920), color=(0, 0, 0)).with_opacity(0.35).with_duration(audio_duration)
     overlay_clips.append(dark_overlay)
 
     # Ust Baslik Banner (Gold Renk)
