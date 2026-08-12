@@ -1,0 +1,38 @@
+[
+  {
+    "id": "stoic_journal_01",
+    "name": "The 30-Day Stoic Mindset & Journal",
+    "digistore_product_id": "452109",
+    "niche": "Stoicism",
+    "commission_rate": "70%",
+    "avg_payout": "$19.50",
+    "description": "Daily Stoic journaling prompt guide for emotional mastery and resilience."
+  },
+  {
+    "id": "dark_psych_02",
+    "name": "Dark Psychology & Influence Secrets",
+    "digistore_product_id": "389201",
+    "niche": "Psychology",
+    "commission_rate": "75%",
+    "avg_payout": "$24.00",
+    "description": "Master non-verbal communication, body language, and emotional immunity."
+  },
+  {
+    "id": "genius_wave_03",
+    "name": "The Genius Wave Brain Activation",
+    "digistore_product_id": "510922",
+    "niche": "Mindset",
+    "commission_rate": "75%",
+    "avg_payout": "$43.25",
+    "description": "Theta brainwave soundwave activation for focus, wealth, and clarity."
+  },
+  {
+    "id": "unshakable_calm_04",
+    "name": "Unshakable Calm: Stress Mastery Blueprint",
+    "digistore_product_id": "412093",
+    "niche": "Self Improvement",
+    "commission_rate": "65%",
+    "avg_payout": "$18.00",
+    "description": "Ancient philosophy techniques to eliminate anxiety and regain focus."
+  }
+]
