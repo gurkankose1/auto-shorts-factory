@@ -20,48 +20,28 @@ ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(ASSETS_DIR, exist_ok=True)
 
-# Direct HD vertical royalty-free background videos (Roman statues, dark aesthetic, stoic nature)
-STOCK_VIDEO_URLS = [
-    "https://cdn.pixabay.com/video/2020/05/25/40149-425149363_large.mp4",
-    "https://cdn.pixabay.com/video/2019/04/23/23011-332490807_large.mp4",
-    "https://cdn.pixabay.com/video/2021/08/04/83879-584730600_large.mp4"
+# High-resolution vertical royalty-free Stoic background images (Unsplash CDN)
+STOIC_IMAGE_URLS = [
+    "https://images.unsplash.com/photo-1552832230-c0197dd311b5?fit=crop&w=1080&h=1920&q=80",  # Rome Colosseum
+    "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?fit=crop&w=1080&h=1920&q=80",  # Roman Ruins
+    "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?fit=crop&w=1080&h=1920&q=80",  # Dark Atmospheric Forest
+    "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?fit=crop&w=1080&h=1920&q=80",  # Cosmic Night Sky
+    "https://images.unsplash.com/photo-1534447677768-be436bb09401?fit=crop&w=1080&h=1920&q=80"   # Epic Stoic Mountain Peak
 ]
 
-def make_procedural_bg_image(width=1080, height=1920, style_index=0):
-    palettes = [
-        ((12, 16, 26), (32, 44, 68)),   # Stoic Slate Navy
-        ((24, 14, 16), (62, 28, 36)),   # Dark Crimson
-        ((15, 15, 15), (45, 45, 45)),   # Dark Onyx
-    ]
-    c1, c2 = palettes[style_index % len(palettes)]
-
-    y, x = np.ogrid[:height, :width]
-    cx, cy = width / 2, height / 2
-    r = np.sqrt((x - cx)**2 + (y - cy)**2) / np.sqrt(cx**2 + cy**2)
-    r = np.clip(r, 0, 1)
-
-    frame = np.zeros((height, width, 3), dtype=np.uint8)
-    for ch in range(3):
-        frame[:, :, ch] = (c1[ch] * (1 - r) + c2[ch] * r).astype(np.uint8)
-
-    return frame
-
-def download_bg_video(url, target_path):
-    if os.path.exists(target_path) and os.path.getsize(target_path) > 100000:
-        return target_path
-    try:
-        print(f"[+] Stok Video Indiriliyor: {url[:50]}...")
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-        resp = requests.get(url, headers=headers, stream=True, timeout=15)
-        if resp.status_code == 200:
-            with open(target_path, "wb") as f:
-                for chunk in resp.iter_content(chunk_size=1024*1024):
-                    if chunk:
-                        f.write(chunk)
-            return target_path
-    except Exception as e:
-        print(f"[!] Indirme hatasi: {e}")
-    return None
+def ensure_bg_images():
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    for i, url in enumerate(STOIC_IMAGE_URLS):
+        img_path = os.path.join(ASSETS_DIR, f"stoic_bg_{i}.jpg")
+        if not os.path.exists(img_path) or os.path.getsize(img_path) < 10000:
+            try:
+                print(f"[+] HD Stoic Görsel İndiriliyor #{i+1}...")
+                resp = requests.get(url, headers=headers, timeout=10)
+                if resp.status_code == 200:
+                    with open(img_path, "wb") as f:
+                        f.write(resp.content)
+            except Exception as e:
+                print(f"[!] Görsel indirilemedi: {e}")
 
 def generate_voiceover(text, voice_path):
     print("[+] YZ Seslendirme olusturuluyor (Edge-TTS - en-US-ChristopherNeural)...")
@@ -139,9 +119,10 @@ def create_video_from_template(template_data, index):
     print(f"[+] Video #{index + 1} Isleniyor: {template_data['title']}")
     print(f"==========================================")
 
+    ensure_bg_images()
+
     video_id = f"video_{index+1}_{template_data['id']}"
     mp3_path = os.path.join(ASSETS_DIR, f"{video_id}.mp3")
-    bg_video_path = os.path.join(ASSETS_DIR, f"bg_{index % len(STOCK_VIDEO_URLS)}.mp4")
     output_mp4 = os.path.join(OUTPUT_DIR, f"{video_id}.mp4")
     metadata_txt = os.path.join(OUTPUT_DIR, f"{video_id}_METADATA.txt")
 
@@ -151,43 +132,16 @@ def create_video_from_template(template_data, index):
     audio_duration = audio.duration
     print(f"[+] Ses Suresi: {audio_duration:.2f} saniye")
 
-    # 2. Arka Plan Videosu
-    bg_url = STOCK_VIDEO_URLS[index % len(STOCK_VIDEO_URLS)]
-    downloaded_file = download_bg_video(bg_url, bg_video_path)
-
-    bg_clip = None
-    if downloaded_file and os.path.exists(downloaded_file):
-        try:
-            raw_clip = VideoFileClip(downloaded_file)
-            if raw_clip.duration < audio_duration:
-                bg_clip = raw_clip.with_effects([vfx.Loop(duration=audio_duration)])
-            else:
-                bg_clip = raw_clip.subclipped(0, audio_duration)
-
-            w, h = bg_clip.size
-            target_w, target_h = 1080, 1920
-            scale_ratio = max(target_w / w, target_h / h)
-            bg_clip = bg_clip.resized(scale_ratio)
-            
-            w_new, h_new = bg_clip.size
-            x_center = (w_new - target_w) / 2
-            y_center = (h_new - target_h) / 2
-            bg_clip = bg_clip.cropped(x1=x_center, y1=y_center, width=target_w, height=target_h)
-            bg_clip = bg_clip.with_duration(audio_duration)
-            print("[+] Stok Arka Plan Videosu Basariyla Enjekte Edildi!")
-        except Exception as e:
-            print(f"[!] Video isleme hatasi: {e}")
-            bg_clip = None
-
-    if bg_clip is None:
-        print("[!] Prosedurel koyu gradyan arka plana geciliyor...")
-        bg_arr = make_procedural_bg_image(style_index=index)
-        bg_clip = ImageClip(bg_arr).with_duration(audio_duration)
+    # 2. HD Sinematik Stoik Görsel Arka Plan
+    bg_img_path = os.path.join(ASSETS_DIR, f"stoic_bg_{index % len(STOIC_IMAGE_URLS)}.jpg")
+    print(f"[+] HD Arka Plan Görseli Yükleniyor: {bg_img_path}")
+    
+    bg_clip = ImageClip(bg_img_path).with_duration(audio_duration).resized((1080, 1920))
 
     overlay_clips = [bg_clip]
 
-    # Sinematik Karartma Katmani (Okunabilirlik icin %35 Opacity)
-    dark_overlay = ColorClip(size=(1080, 1920), color=(0, 0, 0)).with_opacity(0.35).with_duration(audio_duration)
+    # Sinematik Karartma Katmani (Okunabilirlik ve atmosfer icin %45 Opacity)
+    dark_overlay = ColorClip(size=(1080, 1920), color=(0, 0, 0)).with_opacity(0.45).with_duration(audio_duration)
     overlay_clips.append(dark_overlay)
 
     # Ust Baslik Banner (Gold Renk) - Top Center (y=240)
