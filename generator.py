@@ -71,14 +71,14 @@ def generate_voiceover(text, voice_path):
     asyncio.run(amake())
     return voice_path
 
-def create_text_image(text, width=1080, height=1920, font_size=56, text_color="white", highlight_bg=True):
-    img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-
+def create_tight_text_image(text, max_width=900, font_size=56, text_color="white", bg_color=(0, 0, 0, 210), stroke_color="black"):
     try:
         font = ImageFont.truetype("arial.ttf", font_size)
     except IOError:
         font = ImageFont.load_default()
+
+    dummy = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(dummy)
 
     words = text.split()
     lines = []
@@ -87,34 +87,43 @@ def create_text_image(text, width=1080, height=1920, font_size=56, text_color="w
         current_line.append(word)
         test_line = " ".join(current_line)
         bbox = draw.textbbox((0, 0), test_line, font=font)
-        if (bbox[2] - bbox[0]) > (width - 160):
+        if (bbox[2] - bbox[0]) > max_width:
             current_line.pop()
             lines.append(" ".join(current_line))
             current_line = [word]
     if current_line:
         lines.append(" ".join(current_line))
 
-    line_height = font_size + 24
-    total_text_height = len(lines) * line_height
-    start_y = (height - total_text_height) // 2
-
-    for i, line in enumerate(lines):
-        y = start_y + (i * line_height)
+    line_height = font_size + 20
+    max_line_w = 0
+    for line in lines:
         bbox = draw.textbbox((0, 0), line, font=font)
-        text_width = bbox[2] - bbox[0]
-        x = (width - text_width) // 2
+        w = bbox[2] - bbox[0]
+        if w > max_line_w:
+            max_line_w = w
 
-        if highlight_bg:
-            box_pad = 18
-            box_coords = [x - box_pad, y - 10, x + text_width + box_pad, y + font_size + 14]
-            draw.rectangle(box_coords, fill=(0, 0, 0, 210))
+    pad = 24
+    box_w = max_line_w + (pad * 2)
+    box_h = (len(lines) * line_height) + pad
 
-        stroke_w = 4
+    img = Image.new("RGBA", (box_w, box_h), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+
+    if bg_color:
+        draw.rounded_rectangle([0, 0, box_w, box_h], radius=16, fill=bg_color)
+
+    stroke_w = 4
+    for i, line in enumerate(lines):
+        bbox = draw.textbbox((0, 0), line, font=font)
+        lw = bbox[2] - bbox[0]
+        lx = (box_w - lw) // 2
+        ly = (pad // 2) + (i * line_height)
+
         for sx in range(-stroke_w, stroke_w + 1):
             for sy in range(-stroke_w, stroke_w + 1):
-                draw.text((x + sx, y + sy), line, font=font, fill="black")
+                draw.text((lx + sx, ly + sy), line, font=font, fill=stroke_color)
 
-        draw.text((x, y), line, font=font, fill=text_color)
+        draw.text((lx, ly), line, font=font, fill=text_color)
 
     return np.array(img)
 
@@ -151,7 +160,6 @@ def create_video_from_template(template_data, index):
         try:
             raw_clip = VideoFileClip(downloaded_file)
             if raw_clip.duration < audio_duration:
-                # Repeat video loop using vfx.Loop
                 bg_clip = raw_clip.with_effects([vfx.Loop(duration=audio_duration)])
             else:
                 bg_clip = raw_clip.subclipped(0, audio_duration)
@@ -182,20 +190,20 @@ def create_video_from_template(template_data, index):
     dark_overlay = ColorClip(size=(1080, 1920), color=(0, 0, 0)).with_opacity(0.35).with_duration(audio_duration)
     overlay_clips.append(dark_overlay)
 
-    # Ust Baslik Banner (Gold Renk)
-    title_img = create_text_image(template_data['caption_title'], font_size=64, text_color="#FFD700")
-    title_clip = ImageClip(title_img).with_duration(audio_duration).with_position(("center", 180))
+    # Ust Baslik Banner (Gold Renk) - Top Center (y=240)
+    title_img = create_tight_text_image(template_data['caption_title'], font_size=60, text_color="#FFD700")
+    title_clip = ImageClip(title_img).with_duration(audio_duration).with_position(("center", 240))
     overlay_clips.append(title_clip)
 
-    # Dinamik Altyazi Klipleri
+    # Dinamik Altyazi Klipleri - Lower Center (y=1250)
     phrases = split_text_into_phrases(template_data['script_body'], max_words=5)
     phrase_duration = audio_duration / len(phrases)
 
     for i, phrase in enumerate(phrases):
         start_t = i * phrase_duration
         color = "#FFD700" if i % 2 == 0 else "#FFFFFF"
-        sub_img = create_text_image(phrase, font_size=56, text_color=color)
-        sub_clip = ImageClip(sub_img).with_start(start_t).with_duration(phrase_duration).with_position(("center", "center"))
+        sub_img = create_tight_text_image(phrase, font_size=52, text_color=color)
+        sub_clip = ImageClip(sub_img).with_start(start_t).with_duration(phrase_duration).with_position(("center", 1250))
         overlay_clips.append(sub_clip)
 
     # Birlesdirme ve Render
