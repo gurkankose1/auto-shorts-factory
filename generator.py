@@ -154,11 +154,17 @@ def create_video_from_template(template_data, index, niche_key="stoic"):
                 bg_music = bg_music.with_effects([vfx.Loop(duration=audio_duration)])
             else:
                 bg_music = bg_music.subclipped(0, audio_duration)
-            bg_music = bg_music.with_volume(0.12)
+            try:
+                bg_music = bg_music.with_effects([vfx.MultiplyVolume(0.12)])
+            except Exception:
+                try:
+                    bg_music = bg_music.with_volume(0.12)
+                except Exception:
+                    pass
             final_audio = CompositeAudioClip([voice_audio, bg_music])
             print("[+] Sinematik Arka Plan Muzigi Basariyla Harmanlandi (%12 Ses Seviyesi)")
         except Exception as e:
-            print(f"[!] Müzik miks hatası: {e}")
+            print(f"[!] Müzik miks uyarısı: {e}")
 
     # 2. Dinamik Slayt (Niş Özel Görseller)
     num_slides = 3
