@@ -30,11 +30,12 @@ def get_niche_config(niche_key="stoic"):
     }
     return configs.get(niche_key, configs["stoic"])
 
-def get_moving_video(niche_key="stoic"):
+def get_moving_video(niche_key="stoic", index=0):
     if os.path.exists(VIDEO_ASSETS_DIR):
         files = [os.path.join(VIDEO_ASSETS_DIR, f) for f in os.listdir(VIDEO_ASSETS_DIR) if f.startswith(niche_key) and f.endswith(".mp4")]
         if files:
-            return files[0]
+            # Rotates through distinct background videos for every single video post
+            return files[index % len(files)]
     return None
 
 def get_niche_bg_images(niche_prefix="stoic_bg_"):
@@ -170,13 +171,13 @@ def create_video_from_template(template_data, index, niche_key="stoic"):
         except Exception as e:
             print(f"[!] Müzik miks uyarısı: {e}")
 
-    # 2. Gerçek Hareketli MP4 Stok Video Arka Planı (Moving Background Video)
-    moving_video_file = get_moving_video(niche_key)
+    # 2. Her Videoda Farklı Hareketli MP4 Stok Video Arka Planı (Distinct Video Per Post)
+    moving_video_file = get_moving_video(niche_key, index=index)
     overlay_clips = []
 
     if moving_video_file and os.path.exists(moving_video_file):
         try:
-            print(f"[+] Gercek Hareketli Stok Video Kullaniliyor: {moving_video_file}")
+            print(f"[+] Video #{index+1} Icin Farkli Hareketli Stok Video Secildi: {moving_video_file}")
             raw_bg = VideoFileClip(moving_video_file)
             if raw_bg.duration < audio_duration:
                 raw_bg = raw_bg.with_effects([vfx.Loop(duration=audio_duration)])
@@ -190,7 +191,7 @@ def create_video_from_template(template_data, index, niche_key="stoic"):
             bg_video_clip = raw_bg.cropped(x_center=raw_bg.w/2, y_center=raw_bg.h/2, width=1080, height=1920)
             overlay_clips.append(bg_video_clip)
         except Exception as e:
-            print(f"[!] Hareketli video yukleme hatası, görsele düşülüyor: {e}")
+            print(f"[!] Hareketli video yükleme hatası, görsele düşülüyor: {e}")
             overlay_clips = []
 
     # Fallback to image slideshow if no video clip
