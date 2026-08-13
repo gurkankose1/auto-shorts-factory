@@ -15,24 +15,28 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "output_videos")
 
 CHANNELS = [
     {
+        "niche": "stoic",
         "name": "Obsidian Stoic (Motivation)",
         "templates": "templates.json",
         "token": "token.json",
         "secrets": "client_secrets.json"
     },
     {
+        "niche": "bible",
         "name": "Sacred Word Bible (Catholic/Bible)",
         "templates": "templates_bible.json",
         "token": "token_bible.json",
         "secrets": "client_secrets_bible.json"
     },
     {
+        "niche": "health",
         "name": "VitalityDailyHealth (Health/Diet)",
         "templates": "templates_health.json",
         "token": "token_health.json",
         "secrets": "client_secrets_health.json"
     },
     {
+        "niche": "kids",
         "name": "BedtimeStoriesMagicc (Kids Stories)",
         "templates": "templates_kids.json",
         "token": "token_kids.json",
@@ -70,10 +74,10 @@ for ch in CHANNELS:
     if os.path.abspath(secrets_src) != os.path.abspath(secrets_dst):
         shutil.copyfile(secrets_src, secrets_dst)
 
-    # 1. Video Üretimi
+    # 1. Video Üretimi (Nişe özel ses ve nişe özel HD görseller)
     print(f"[+] {ch['name']} için 3 Video Render Ediliyor...")
     try:
-        generator.main()
+        generator.main(niche_key=ch['niche'])
     except Exception as e:
         print(f"[!] Video üretim hatası ({ch['name']}): {e}")
 
