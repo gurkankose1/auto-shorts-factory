@@ -1,6 +1,7 @@
 import os
 import sys
 import io
+import json
 import shutil
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
@@ -10,6 +11,7 @@ import generator
 import youtube_uploader
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+OUTPUT_DIR = os.path.join(BASE_DIR, "output_videos")
 
 CHANNELS = [
     {
@@ -78,7 +80,21 @@ for ch in CHANNELS:
     # 2. Otomatik YouTube Yükleme & Yorum Sabitleme
     print(f"[+] {ch['name']} YouTube Kanalına Yükleme Yapılıyor...")
     try:
-        youtube_uploader.main()
+        with open(os.path.join(BASE_DIR, "templates.json"), "r", encoding="utf-8") as f:
+            templates = json.load(f)
+
+        for i, t in enumerate(templates[:3]):
+            video_id = f"video_{i+1}_{t['id']}"
+            video_path = os.path.join(OUTPUT_DIR, f"{video_id}.mp4")
+            
+            metadata = {
+                "title": t["title"],
+                "description": f"{t['script_body']}\n\n#shorts #viral",
+                "pinned_comment": t["pinned_comment"]
+            }
+
+            if os.path.exists(video_path):
+                youtube_uploader.upload_video_and_comment(video_path, metadata)
     except Exception as e:
         print(f"[!] YouTube Yükleme hatası ({ch['name']}): {e}")
 
