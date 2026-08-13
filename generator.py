@@ -20,50 +20,46 @@ ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(ASSETS_DIR, exist_ok=True)
 
-# High-resolution vertical royalty-free Stoic background images (Unsplash CDN)
+# Default Stoic background images fallback
 STOIC_IMAGE_URLS = [
-    "https://images.unsplash.com/photo-1552832230-c0197dd311b5?fit=crop&w=1080&h=1920&q=80",  # Rome Colosseum
-    "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?fit=crop&w=1080&h=1920&q=80",  # Roman Ruins
-    "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?fit=crop&w=1080&h=1920&q=80",  # Dark Forest
-    "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?fit=crop&w=1080&h=1920&q=80",  # Cosmic Night Sky
-    "https://images.unsplash.com/photo-1534447677768-be436bb09401?fit=crop&w=1080&h=1920&q=80"   # Epic Stoic Peak
+    "https://images.unsplash.com/photo-1552832230-c0197dd311b5?fit=crop&w=1080&h=1920&q=80",
+    "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?fit=crop&w=1080&h=1920&q=80",
+    "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?fit=crop&w=1080&h=1920&q=80",
+    "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?fit=crop&w=1080&h=1920&q=80",
+    "https://images.unsplash.com/photo-1534447677768-be436bb09401?fit=crop&w=1080&h=1920&q=80"
 ]
 
 MUSIC_URL = "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3"
 
-def ensure_bg_assets():
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
-    downloaded_paths = []
-    for i, url in enumerate(STOIC_IMAGE_URLS):
-        img_path = os.path.join(ASSETS_DIR, f"stoic_bg_{i}.jpg")
-        if not os.path.exists(img_path) or os.path.getsize(img_path) < 10000:
-            try:
-                resp = requests.get(url, headers=headers, timeout=10)
-                if resp.status_code == 200:
-                    with open(img_path, "wb") as f:
-                        f.write(resp.content)
-            except Exception as e:
-                print(f"[!] Görsel indirilemedi: {e}")
-        if os.path.exists(img_path):
-            downloaded_paths.append(img_path)
+def get_niche_config(niche_key="stoic"):
+    configs = {
+        "stoic": {"voice": "en-US-ChristopherNeural", "prefix": "stoic_bg_"},
+        "bible": {"voice": "en-US-GuyNeural", "prefix": "bible_bg_"},
+        "health": {"voice": "en-US-JennyNeural", "prefix": "health_bg_"},
+        "kids": {"voice": "en-US-AnaNeural", "prefix": "kids_bg_"}
+    }
+    return configs.get(niche_key, configs["stoic"])
 
-    music_path = os.path.join(ASSETS_DIR, "stoic_bg_music.mp3")
-    if not os.path.exists(music_path) or os.path.getsize(music_path) < 50000:
-        try:
-            print("[+] Sinematik Arka Plan Müziği İndiriliyor...")
-            resp = requests.get(MUSIC_URL, headers=headers, timeout=15)
-            if resp.status_code == 200:
-                with open(music_path, "wb") as f:
-                    f.write(resp.content)
-        except Exception as e:
-            print(f"[!] Müzik indirilemedi: {e}")
+def get_niche_bg_images(niche_prefix="stoic_bg_"):
+    matching_paths = []
+    for i in range(5):
+        img_name = f"{niche_prefix}{i}.jpg"
+        img_path = os.path.join(ASSETS_DIR, img_name)
+        if os.path.exists(img_path) and os.path.getsize(img_path) > 10000:
+            matching_paths.append(img_path)
+    
+    # Fallback to stoic_bg_ if niche images missing
+    if not matching_paths:
+        for i in range(5):
+            img_path = os.path.join(ASSETS_DIR, f"stoic_bg_{i}.jpg")
+            if os.path.exists(img_path):
+                matching_paths.append(img_path)
+    return matching_paths
 
-    return downloaded_paths, music_path
-
-def generate_voiceover(text, voice_path):
-    print("[+] YZ Seslendirme olusturuluyor (Edge-TTS - en-US-ChristopherNeural)...")
+def generate_voiceover(text, voice_path, voice_name="en-US-ChristopherNeural"):
+    print(f"[+] YZ Seslendirme olusturuluyor ({voice_name})...")
     async def amake():
-        communicate = edge_tts.Communicate(text, "en-US-ChristopherNeural")
+        communicate = edge_tts.Communicate(text, voice_name)
         await communicate.save(voice_path)
     asyncio.run(amake())
     return voice_path
@@ -141,25 +137,26 @@ def split_text_into_phrases(full_text, max_words=4):
         phrases.append(" ".join(words[i:i+max_words]))
     return phrases
 
-def create_video_from_template(template_data, index):
+def create_video_from_template(template_data, index, niche_key="stoic"):
     print(f"\n==========================================")
-    print(f"[+] Video #{index + 1} Isleniyor: {template_data['title']}")
+    print(f"[+] Video #{index + 1} Isleniyor [{niche_key.upper()}]: {template_data['title']}")
     print(f"==========================================")
 
-    bg_images, music_path = ensure_bg_assets()
+    niche_cfg = get_niche_config(niche_key)
+    bg_images = get_niche_bg_images(niche_cfg["prefix"])
+    music_path = os.path.join(ASSETS_DIR, "stoic_bg_music.mp3")
 
     video_id = f"video_{index+1}_{template_data['id']}"
     mp3_path = os.path.join(ASSETS_DIR, f"{video_id}.mp3")
     output_mp4 = os.path.join(OUTPUT_DIR, f"{video_id}.mp4")
     metadata_txt = os.path.join(OUTPUT_DIR, f"{video_id}_METADATA.txt")
 
-    # 1. YZ Seslendirme & Sinematik Arka Plan Müzik Miksi
-    generate_voiceover(template_data['script_body'], mp3_path)
+    # 1. YZ Seslendirme (Niş Özel Ses) & Sinematik Arka Plan Müzik Miksi
+    generate_voiceover(template_data['script_body'], mp3_path, niche_cfg["voice"])
     voice_audio = AudioFileClip(mp3_path)
     audio_duration = voice_audio.duration
     print(f"[+] Ses Suresi: {audio_duration:.2f} saniye")
 
-    # Background music mixed at 12% volume for subtle dramatic atmosphere
     final_audio = voice_audio
     if os.path.exists(music_path):
         try:
@@ -174,7 +171,7 @@ def create_video_from_template(template_data, index):
         except Exception as e:
             print(f"[!] Müzik miks hatası: {e}")
 
-    # 2. Dinamik 3 Görselli Slayt (Slideshow Background)
+    # 2. Dinamik 3 Görselli Slayt (Niş Özel Görseller)
     num_slides = 3
     slide_dur = audio_duration / num_slides
     bg_clips = []
@@ -195,7 +192,7 @@ def create_video_from_template(template_data, index):
 
     overlay_clips = list(bg_clips)
 
-    # Sinematik Karartma Katmani (Okunabilirlik ve atmosfer icin %45 Opacity)
+    # Sinematik Karartma Katmani (%45 Opacity)
     dark_overlay = ColorClip(size=(1080, 1920), color=(0, 0, 0)).with_opacity(0.45).with_duration(audio_duration)
     overlay_clips.append(dark_overlay)
 
@@ -233,21 +230,10 @@ def create_video_from_template(template_data, index):
     for c in bg_clips:
         c.close()
 
-    # Metadata Yayinlama Dosyasi
-    with open(metadata_txt, "w", encoding="utf-8") as f:
-        f.write(f"====================================================\n")
-        f.write(f"VIDEO #{index+1} YAYINLAMA METADATASI\n")
-        f.write(f"====================================================\n\n")
-        f.write(f"VIDEO BASLIGI (Title):\n{template_data['title']}\n\n")
-        f.write(f"VIDEO ACIKLAMASI (Description):\n{template_data['script_body']}\n\n#stoicism #mindset #motivation #shorts #viral\n\n")
-        f.write(f"SABITLENECEK YORUM (Pinned Comment):\n{template_data['pinned_comment']}\n\n")
-        f.write(f"====================================================\n")
-
-    print(f"[+] VIDEO #{index+1} BASARIYLA URETILDI!")
     return output_mp4
 
-def main():
-    print("[+] YAPAY ZEKA SHORTS FABRIKASI CALISTIRILIYOR...")
+def main(niche_key="stoic"):
+    print(f"[+] YAPAY ZEKA SHORTS FABRIKASI CALISTIRILIYOR [{niche_key.upper()}]...")
     templates_path = os.path.join(BASE_DIR, "templates.json")
     
     with open(templates_path, "r", encoding="utf-8") as f:
@@ -257,11 +243,10 @@ def main():
     generated_files = []
 
     for i in range(num_videos):
-        mp4_path = create_video_from_template(templates[i], i)
+        mp4_path = create_video_from_template(templates[i], i, niche_key=niche_key)
         generated_files.append(mp4_path)
 
     print("\n[+] TEBRILER! TUM VIDEOLAR URETILDI!")
-    print(f"[+] Olusturulan MP4 ve Metadata dosyalari 'output_videos' klasorunde hazir:")
     for file in generated_files:
         print(f" - {file}")
 
