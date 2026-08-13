@@ -1,4 +1,4 @@
-name: Daily Autonomous Shorts Factory
+name: Daily Autonomous Shorts Factory (4 Channels)
 
 on:
   schedule:
@@ -28,15 +28,27 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install google-api-python-client google-auth-oauthlib google-auth-httplib2
+          pip install google-api-python-client google-auth-oauthlib google-auth-httplib2 pynacl
 
-      - name: Restore Credentials from GitHub Secrets
+      - name: Restore Credentials for All 4 Channels from GitHub Secrets
         env:
           TOKEN_JSON: ${{ secrets.TOKEN_JSON }}
           CLIENT_SECRETS_JSON: ${{ secrets.CLIENT_SECRETS_JSON }}
+          TOKEN_BIBLE: ${{ secrets.TOKEN_BIBLE }}
+          CLIENT_SECRETS_BIBLE: ${{ secrets.CLIENT_SECRETS_BIBLE }}
+          TOKEN_HEALTH: ${{ secrets.TOKEN_HEALTH }}
+          CLIENT_SECRETS_HEALTH: ${{ secrets.CLIENT_SECRETS_HEALTH }}
+          TOKEN_KIDS: ${{ secrets.TOKEN_KIDS }}
+          CLIENT_SECRETS_KIDS: ${{ secrets.CLIENT_SECRETS_KIDS }}
         run: |
           echo "$TOKEN_JSON" > token.json
           echo "$CLIENT_SECRETS_JSON" > client_secrets.json
+          echo "$TOKEN_BIBLE" > token_bible.json
+          echo "$CLIENT_SECRETS_BIBLE" > client_secrets_bible.json
+          echo "$TOKEN_HEALTH" > token_health.json
+          echo "$CLIENT_SECRETS_HEALTH" > client_secrets_health.json
+          echo "$TOKEN_KIDS" > token_kids.json
+          echo "$CLIENT_SECRETS_KIDS" > client_secrets_kids.json
 
-      - name: Run Daily Cloud Pipeline
-        run: python run_daily_cloud.py
+      - name: Run Multi-Channel Cloud Pipeline
+        run: python run_all_channels_cloud.py
