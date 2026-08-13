@@ -17,6 +17,7 @@ from moviepy import VideoFileClip, AudioFileClip, ImageClip, CompositeVideoClip,
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output_videos")
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+VIDEO_ASSETS_DIR = os.path.join(ASSETS_DIR, "moving_videos")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(ASSETS_DIR, exist_ok=True)
 
@@ -28,6 +29,13 @@ def get_niche_config(niche_key="stoic"):
         "kids": {"voice": "en-US-AnaNeural", "prefix": "kids_bg_"}
     }
     return configs.get(niche_key, configs["stoic"])
+
+def get_moving_video(niche_key="stoic"):
+    if os.path.exists(VIDEO_ASSETS_DIR):
+        files = [os.path.join(VIDEO_ASSETS_DIR, f) for f in os.listdir(VIDEO_ASSETS_DIR) if f.startswith(niche_key) and f.endswith(".mp4")]
+        if files:
+            return files[0]
+    return None
 
 def get_niche_bg_images(niche_prefix="stoic_bg_"):
     matching_paths = []
@@ -133,7 +141,6 @@ def create_video_from_template(template_data, index, niche_key="stoic"):
     print(f"==========================================")
 
     niche_cfg = get_niche_config(niche_key)
-    bg_images = get_niche_bg_images(niche_cfg["prefix"])
     music_path = os.path.join(ASSETS_DIR, "stoic_bg_music.mp3")
 
     video_id = f"video_{index+1}_{template_data['id']}"
@@ -157,35 +164,49 @@ def create_video_from_template(template_data, index, niche_key="stoic"):
             try:
                 bg_music = bg_music.with_effects([vfx.MultiplyVolume(0.12)])
             except Exception:
-                try:
-                    bg_music = bg_music.with_volume(0.12)
-                except Exception:
-                    pass
+                pass
             final_audio = CompositeAudioClip([voice_audio, bg_music])
             print("[+] Sinematik Arka Plan Muzigi Basariyla Harmanlandi (%12 Ses Seviyesi)")
         except Exception as e:
             print(f"[!] Müzik miks uyarısı: {e}")
 
-    # 2. Dinamik Slayt (Niş Özel Görseller)
-    num_slides = 3
-    slide_dur = audio_duration / num_slides
-    bg_clips = []
+    # 2. Gerçek Hareketli MP4 Stok Video Arka Planı (Moving Background Video)
+    moving_video_file = get_moving_video(niche_key)
+    overlay_clips = []
 
-    for s in range(num_slides):
-        img_idx = (index * num_slides + s) % len(bg_images)
-        img_path = bg_images[img_idx]
-        start_time = s * slide_dur
-        dur = slide_dur if s < num_slides - 1 else (audio_duration - start_time)
-        
-        slide_clip = (
-            ImageClip(img_path)
-            .resized((1080, 1920))
-            .with_start(start_time)
-            .with_duration(dur)
-        )
-        bg_clips.append(slide_clip)
+    if moving_video_file and os.path.exists(moving_video_file):
+        try:
+            print(f"[+] Gercek Hareketli Stok Video Kullaniliyor: {moving_video_file}")
+            raw_bg = VideoFileClip(moving_video_file)
+            if raw_bg.duration < audio_duration:
+                raw_bg = raw_bg.with_effects([vfx.Loop(duration=audio_duration)])
+            else:
+                raw_bg = raw_bg.subclipped(0, audio_duration)
+            
+            # Crop to 1080x1920 portrait
+            raw_bg = raw_bg.resized(height=1920)
+            if raw_bg.w < 1080:
+                raw_bg = raw_bg.resized(width=1080)
+            bg_video_clip = raw_bg.cropped(x_center=raw_bg.w/2, y_center=raw_bg.h/2, width=1080, height=1920)
+            overlay_clips.append(bg_video_clip)
+        except Exception as e:
+            print(f"[!] Hareketli video yukleme hatası, görsele düşülüyor: {e}")
+            overlay_clips = []
 
-    overlay_clips = list(bg_clips)
+    # Fallback to image slideshow if no video clip
+    if not overlay_clips:
+        bg_images = get_niche_bg_images(niche_cfg["prefix"])
+        num_slides = 3
+        slide_dur = audio_duration / num_slides
+        bg_clips = []
+        for s in range(num_slides):
+            img_idx = (index * num_slides + s) % len(bg_images)
+            img_path = bg_images[img_idx]
+            start_time = s * slide_dur
+            dur = slide_dur if s < num_slides - 1 else (audio_duration - start_time)
+            slide_clip = ImageClip(img_path).resized((1080, 1920)).with_start(start_time).with_duration(dur)
+            bg_clips.append(slide_clip)
+        overlay_clips = list(bg_clips)
 
     # Sinematik Karartma Katmani (%45 Opacity)
     dark_overlay = ColorClip(size=(1080, 1920), color=(0, 0, 0)).with_opacity(0.45).with_duration(audio_duration)
@@ -199,7 +220,6 @@ def create_video_from_template(template_data, index, niche_key="stoic"):
     # CapCut Tarzi Kelime Kelime Parlayan Kinetik Altyazi Motoru (1-2 Kelime Pop) - Lower Center (y=1200)
     phrases = split_text_into_phrases(template_data['script_body'], max_words=2)
     phrase_duration = audio_duration / len(phrases)
-
     color_palette = ["#FFFF00", "#00FF88", "#FFFFFF", "#FFD700"]
 
     for i, phrase in enumerate(phrases):
@@ -224,8 +244,6 @@ def create_video_from_template(template_data, index, niche_key="stoic"):
 
     final_video.close()
     voice_audio.close()
-    for c in bg_clips:
-        c.close()
 
     return output_mp4
 
