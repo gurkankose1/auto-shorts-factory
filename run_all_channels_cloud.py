@@ -60,11 +60,13 @@ for ch in CHANNELS:
         print(f"[!] İzin dosyaları bulunamadı, bu kanal atlanıyor: {ch['name']}")
         continue
 
-    # Swap config files for current channel
-    if ch['templates'] != "templates.json":
+    # Swap config files for current channel safely
+    if os.path.abspath(templates_src) != os.path.abspath(templates_dst):
         shutil.copyfile(templates_src, templates_dst)
-    shutil.copyfile(token_src, token_dst)
-    shutil.copyfile(secrets_src, secrets_dst)
+    if os.path.abspath(token_src) != os.path.abspath(token_dst):
+        shutil.copyfile(token_src, token_dst)
+    if os.path.abspath(secrets_src) != os.path.abspath(secrets_dst):
+        shutil.copyfile(secrets_src, secrets_dst)
 
     # 1. Video Üretimi
     print(f"[+] {ch['name']} için 3 Video Render Ediliyor...")
