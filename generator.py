@@ -20,17 +20,6 @@ ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(ASSETS_DIR, exist_ok=True)
 
-# Default Stoic background images fallback
-STOIC_IMAGE_URLS = [
-    "https://images.unsplash.com/photo-1552832230-c0197dd311b5?fit=crop&w=1080&h=1920&q=80",
-    "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?fit=crop&w=1080&h=1920&q=80",
-    "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?fit=crop&w=1080&h=1920&q=80",
-    "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?fit=crop&w=1080&h=1920&q=80",
-    "https://images.unsplash.com/photo-1534447677768-be436bb09401?fit=crop&w=1080&h=1920&q=80"
-]
-
-MUSIC_URL = "https://cdn.pixabay.com/audio/2022/05/27/audio_1808fbf07a.mp3"
-
 def get_niche_config(niche_key="stoic"):
     configs = {
         "stoic": {"voice": "en-US-ChristopherNeural", "prefix": "stoic_bg_"},
@@ -48,7 +37,6 @@ def get_niche_bg_images(niche_prefix="stoic_bg_"):
         if os.path.exists(img_path) and os.path.getsize(img_path) > 10000:
             matching_paths.append(img_path)
     
-    # Fallback to stoic_bg_ if niche images missing
     if not matching_paths:
         for i in range(5):
             img_path = os.path.join(ASSETS_DIR, f"stoic_bg_{i}.jpg")
@@ -64,7 +52,7 @@ def generate_voiceover(text, voice_path, voice_name="en-US-ChristopherNeural"):
     asyncio.run(amake())
     return voice_path
 
-def create_tight_text_image(text, max_width=960, font_size=72, text_color="white", bg_color=(0, 0, 0, 230), stroke_color="black"):
+def create_tight_text_image(text, max_width=960, font_size=76, text_color="#FFFF00", bg_color=(0, 0, 0, 240), stroke_color="black"):
     font = None
     custom_font_path = os.path.join(ASSETS_DIR, "font.ttf")
     if os.path.exists(custom_font_path):
@@ -82,7 +70,8 @@ def create_tight_text_image(text, max_width=960, font_size=72, text_color="white
     dummy = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
     draw = ImageDraw.Draw(dummy)
 
-    words = text.split()
+    text_upper = text.upper()
+    words = text_upper.split()
     lines = []
     current_line = []
     for word in words:
@@ -104,7 +93,7 @@ def create_tight_text_image(text, max_width=960, font_size=72, text_color="white
         if w > max_line_w:
             max_line_w = w
 
-    pad_x = 32
+    pad_x = 36
     pad_y = 20
     box_w = max_line_w + (pad_x * 2)
     box_h = (len(lines) * line_height) + (pad_y * 2)
@@ -113,9 +102,9 @@ def create_tight_text_image(text, max_width=960, font_size=72, text_color="white
     draw = ImageDraw.Draw(img)
 
     if bg_color:
-        draw.rounded_rectangle([0, 0, box_w, box_h], radius=20, fill=bg_color)
+        draw.rounded_rectangle([0, 0, box_w, box_h], radius=24, fill=bg_color)
 
-    stroke_w = 5
+    stroke_w = 6
     for i, line in enumerate(lines):
         bbox = draw.textbbox((0, 0), line, font=font)
         lw = bbox[2] - bbox[0]
@@ -130,7 +119,7 @@ def create_tight_text_image(text, max_width=960, font_size=72, text_color="white
 
     return np.array(img)
 
-def split_text_into_phrases(full_text, max_words=4):
+def split_text_into_phrases(full_text, max_words=2):
     words = full_text.split()
     phrases = []
     for i in range(0, len(words), max_words):
@@ -138,8 +127,9 @@ def split_text_into_phrases(full_text, max_words=4):
     return phrases
 
 def create_video_from_template(template_data, index, niche_key="stoic"):
+    clean_title = template_data['title'].encode('ascii', errors='ignore').decode('ascii')
     print(f"\n==========================================")
-    print(f"[+] Video #{index + 1} Isleniyor [{niche_key.upper()}]: {template_data['title']}")
+    print(f"[+] Video #{index + 1} Isleniyor [{niche_key.upper()}]: {clean_title}")
     print(f"==========================================")
 
     niche_cfg = get_niche_config(niche_key)
@@ -149,7 +139,6 @@ def create_video_from_template(template_data, index, niche_key="stoic"):
     video_id = f"video_{index+1}_{template_data['id']}"
     mp3_path = os.path.join(ASSETS_DIR, f"{video_id}.mp3")
     output_mp4 = os.path.join(OUTPUT_DIR, f"{video_id}.mp4")
-    metadata_txt = os.path.join(OUTPUT_DIR, f"{video_id}_METADATA.txt")
 
     # 1. YZ Seslendirme (Niş Özel Ses) & Sinematik Arka Plan Müzik Miksi
     generate_voiceover(template_data['script_body'], mp3_path, niche_cfg["voice"])
@@ -171,7 +160,7 @@ def create_video_from_template(template_data, index, niche_key="stoic"):
         except Exception as e:
             print(f"[!] Müzik miks hatası: {e}")
 
-    # 2. Dinamik 3 Görselli Slayt (Niş Özel Görseller)
+    # 2. Dinamik Slayt (Niş Özel Görseller)
     num_slides = 3
     slide_dur = audio_duration / num_slides
     bg_clips = []
@@ -197,19 +186,21 @@ def create_video_from_template(template_data, index, niche_key="stoic"):
     overlay_clips.append(dark_overlay)
 
     # Ust Baslik Banner (Büyük Altın Renk) - Top Center (y=180)
-    title_img = create_tight_text_image(template_data['caption_title'], font_size=68, text_color="#FFD700")
+    title_img = create_tight_text_image(template_data['caption_title'], font_size=72, text_color="#FFD700")
     title_clip = ImageClip(title_img).with_duration(audio_duration).with_position(("center", 180))
     overlay_clips.append(title_clip)
 
-    # Dinamik Altyazi Klipleri (Dev Boyut, Sarı/Beyaz Parlayan) - Lower Center (y=1250)
-    phrases = split_text_into_phrases(template_data['script_body'], max_words=4)
+    # CapCut Tarzi Kelime Kelime Parlayan Kinetik Altyazi Motoru (1-2 Kelime Pop) - Lower Center (y=1200)
+    phrases = split_text_into_phrases(template_data['script_body'], max_words=2)
     phrase_duration = audio_duration / len(phrases)
+
+    color_palette = ["#FFFF00", "#00FF88", "#FFFFFF", "#FFD700"]
 
     for i, phrase in enumerate(phrases):
         start_t = i * phrase_duration
-        color = "#FFD700" if i % 2 == 0 else "#FFFFFF"
-        sub_img = create_tight_text_image(phrase, font_size=64, text_color=color)
-        sub_clip = ImageClip(sub_img).with_start(start_t).with_duration(phrase_duration).with_position(("center", 1250))
+        color = color_palette[i % len(color_palette)]
+        sub_img = create_tight_text_image(phrase, font_size=76, text_color=color)
+        sub_clip = ImageClip(sub_img).with_start(start_t).with_duration(phrase_duration).with_position(("center", 1200))
         overlay_clips.append(sub_clip)
 
     # Birlesdirme ve Render
