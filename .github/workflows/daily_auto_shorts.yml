@@ -27,8 +27,8 @@ jobs:
       - name: Install Python Packages
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install google-api-python-client google-auth-oauthlib google-auth-httplib2 pynacl
+          pip install --no-cache-dir -r requirements.txt
+          pip install --no-cache-dir google-api-python-client google-auth-oauthlib google-auth-httplib2
 
       - name: Restore Credentials for All 4 Channels from GitHub Secrets
         env:
