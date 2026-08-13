@@ -47,7 +47,6 @@ def ensure_bg_assets():
         if os.path.exists(img_path):
             downloaded_paths.append(img_path)
 
-    # Ensure background music
     music_path = os.path.join(ASSETS_DIR, "stoic_bg_music.mp3")
     if not os.path.exists(music_path) or os.path.getsize(music_path) < 50000:
         try:
@@ -70,10 +69,19 @@ def generate_voiceover(text, voice_path):
     return voice_path
 
 def create_tight_text_image(text, max_width=960, font_size=72, text_color="white", bg_color=(0, 0, 0, 230), stroke_color="black"):
-    try:
-        font = ImageFont.truetype("arial.ttf", font_size)
-    except IOError:
-        font = ImageFont.load_default()
+    font = None
+    custom_font_path = os.path.join(ASSETS_DIR, "font.ttf")
+    if os.path.exists(custom_font_path):
+        try:
+            font = ImageFont.truetype(custom_font_path, font_size)
+        except Exception:
+            font = None
+
+    if font is None:
+        try:
+            font = ImageFont.truetype("arial.ttf", font_size)
+        except IOError:
+            font = ImageFont.load_default()
 
     dummy = Image.new("RGBA", (1080, 1920), (0, 0, 0, 0))
     draw = ImageDraw.Draw(dummy)
