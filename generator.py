@@ -8,9 +8,17 @@ import edge_tts
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 
-# Force stdout/stderr to UTF-8 on Windows
-if not isinstance(sys.stdout, io.TextIOWrapper) or sys.stdout.closed:
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+# Safely reconfigure stdout/stderr encoding without closing underlying buffer
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='ignore')
+    except Exception:
+        pass
+if hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8', errors='ignore')
+    except Exception:
+        pass
 
 from moviepy import VideoFileClip, AudioFileClip, ImageClip, CompositeVideoClip, ColorClip, CompositeAudioClip, vfx
 from download_niche_moving_videos_github import ensure_niche_moving_videos
@@ -22,9 +30,6 @@ VIDEO_ASSETS_DIR = os.path.join(ASSETS_DIR, "moving_videos")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(ASSETS_DIR, exist_ok=True)
 os.makedirs(VIDEO_ASSETS_DIR, exist_ok=True)
-
-# 100% CC0 Public Domain Ambient Background Music (Zero Content ID Claims)
-CC0_MUSIC_URL = "https://raw.githubusercontent.com/cwilso/metronome/master/click.wav" # Fallback clean audio or CC0 ambient
 
 def get_niche_config(niche_key="stoic"):
     configs = {
