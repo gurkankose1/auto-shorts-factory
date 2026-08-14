@@ -4,8 +4,17 @@ import io
 import json
 import shutil
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+# Safely reconfigure stdout/stderr encoding without closing underlying buffer
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='ignore')
+    except Exception:
+        pass
+if hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8', errors='ignore')
+    except Exception:
+        pass
 
 import generator
 import youtube_uploader
@@ -59,9 +68,9 @@ if os.path.exists(HISTORY_FILE):
         posted_history = {}
 
 for ch in CHANNELS:
-    print(f"\n====================================================")
+    print("\n====================================================")
     print(f"[+] KANAL İŞLENİYOR: {ch['name']}")
-    print(f"====================================================")
+    print("====================================================")
 
     templates_src = os.path.join(BASE_DIR, ch['templates'])
     templates_dst = os.path.join(BASE_DIR, "templates.json")
