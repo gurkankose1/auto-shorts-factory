@@ -3,6 +3,7 @@ import sys
 import io
 import json
 import shutil
+import random
 
 # Safely reconfigure stdout/stderr encoding without closing underlying buffer
 if hasattr(sys.stdout, 'reconfigure'):
@@ -97,8 +98,10 @@ for ch in CHANNELS:
     if len(unposted) < 3:
         print(f"[+] Tüm senaryolar tamamlandı, {ch['name']} için döngü taze sıfırlandı!")
         posted_ids = []
-        unposted = all_templates
+        unposted = list(all_templates)
 
+    # Randomize order so topics never repeat sequentially
+    random.shuffle(unposted)
     selected_templates = unposted[:3]
 
     # Write selected 3 templates to active templates.json
