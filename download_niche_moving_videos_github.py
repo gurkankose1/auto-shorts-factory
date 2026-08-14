@@ -12,8 +12,8 @@ os.makedirs(VIDEO_ASSETS_DIR, exist_ok=True)
 
 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
-# 100% Topic-Matched Verified HD MP4 Video Sources
-NICHE_VIDEO_SOURCES = {
+# Expansive Royalty-Free HD MP4 Video Sources per Niche
+UNLIMITED_VIDEO_SOURCES = {
     "stoic": [
         "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4",
         "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking-and-pause.mp4",
@@ -37,8 +37,8 @@ NICHE_VIDEO_SOURCES = {
 }
 
 def ensure_niche_moving_videos():
-    print("[+] Nişlere Özel İlgili HD MP4 Videolar Kontrol Ediliyor...")
-    for niche, urls in NICHE_VIDEO_SOURCES.items():
+    print("[+] Sınırsız Niş Stok Videoları Kontrol Ediliyor...")
+    for niche, urls in UNLIMITED_VIDEO_SOURCES.items():
         for i, url in enumerate(urls):
             video_path = os.path.join(VIDEO_ASSETS_DIR, f"{niche}_video_{i}.mp4")
             if not os.path.exists(video_path) or os.path.getsize(video_path) < 100000:
