@@ -28,7 +28,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install --no-cache-dir -r requirements.txt
-          pip install --no-cache-dir google-api-python-client google-auth-oauthlib google-auth-httplib2
+          pip install --no-cache-dir google-api-python-client google-auth-oauthlib google-auth-httplib2 edge-tts moviepy pillow
 
       - name: Restore Credentials for All 4 Channels from GitHub Secrets
         env:
@@ -52,3 +52,11 @@ jobs:
 
       - name: Run Multi-Channel Cloud Pipeline
         run: python run_all_channels_cloud.py
+
+      - name: Commit and Push Updated History to GitHub Repo
+        run: |
+          git config --global user.name "Auto-Shorts Bot"
+          git config --global user.email "bot@auto-shorts.com"
+          git add posted_history.json
+          git commit -m "Auto-update posted history queue [skip ci]" || echo "No changes to commit"
+          git push origin main || echo "Git push skipped"
