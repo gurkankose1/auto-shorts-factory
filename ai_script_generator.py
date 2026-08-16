@@ -5,7 +5,6 @@ import sys
 import io
 import time
 import random
-import base64
 
 if hasattr(sys.stdout, 'reconfigure'):
     try:
@@ -13,9 +12,9 @@ if hasattr(sys.stdout, 'reconfigure'):
     except Exception:
         pass
 
-# Decode API key at runtime to bypass plain-text secret protection scanning on GitHub
-_KEY_B64 = "QVEuQWI4Uk42STBfam45MFNnYWNIdWVzLUlmWS10R1FuRElRNkpyNThhYzhGam5vNTE1dw=="
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", base64.b64decode(_KEY_B64).decode())
+# API key is stored securely as a GitHub Secret (GEMINI_API_KEY)
+# Never hardcode API keys in source code
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 PROMPT_SYSTEM_TEMPLATES = {
     "stoic": {
