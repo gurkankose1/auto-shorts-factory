@@ -5,7 +5,6 @@ import json
 import shutil
 import random
 
-# Safely reconfigure stdout/stderr encoding without closing underlying buffer
 if hasattr(sys.stdout, 'reconfigure'):
     try:
         sys.stdout.reconfigure(encoding='utf-8', errors='ignore')
@@ -19,6 +18,7 @@ if hasattr(sys.stderr, 'reconfigure'):
 
 import generator
 import youtube_uploader
+import ai_script_generator
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(BASE_DIR, "output_videos")
@@ -28,35 +28,31 @@ CHANNELS = [
     {
         "niche": "stoic",
         "name": "Obsidian Stoic (Motivation)",
-        "templates": "templates.json",
         "token": "token.json",
         "secrets": "client_secrets.json"
     },
     {
         "niche": "bible",
         "name": "Sacred Word Bible (Catholic/Bible)",
-        "templates": "templates_bible.json",
         "token": "token_bible.json",
         "secrets": "client_secrets_bible.json"
     },
     {
         "niche": "health",
         "name": "VitalityDailyHealth (Health/Diet)",
-        "templates": "templates_health.json",
         "token": "token_health.json",
         "secrets": "client_secrets_health.json"
     },
     {
         "niche": "kids",
         "name": "BedtimeStoriesMagicc (Kids Stories)",
-        "templates": "templates_kids.json",
         "token": "token_kids.json",
         "secrets": "client_secrets_kids.json"
     }
 ]
 
 print("====================================================")
-print("🚀 4 KANAL İÇİN DİJİTAL SHORTS FABRİKASI BAŞLATILIYOR")
+print("🚀 4 KANAL İÇİN DİJİTAL YZ SHORTS FABRİKASI BAŞLATILIYOR")
 print("====================================================\n")
 
 # Load history tracker
@@ -69,12 +65,10 @@ if os.path.exists(HISTORY_FILE):
         posted_history = {}
 
 for ch in CHANNELS:
+    niche_key = ch['niche']
     print("\n====================================================")
     print(f"[+] KANAL İŞLENİYOR: {ch['name']}")
     print("====================================================")
-
-    templates_src = os.path.join(BASE_DIR, ch['templates'])
-    templates_dst = os.path.join(BASE_DIR, "templates.json")
 
     token_src = os.path.join(BASE_DIR, ch['token'])
     token_dst = os.path.join(BASE_DIR, "token.json")
@@ -86,25 +80,25 @@ for ch in CHANNELS:
         print(f"[!] İzin dosyaları bulunamadı, bu kanal atlanıyor: {ch['name']}")
         continue
 
-    # Load full template pool for current niche
-    with open(templates_src, "r", encoding="utf-8") as f:
-        all_templates = json.load(f)
-
-    # Filter unposted templates to guarantee 100% unique daily content
-    niche_key = ch['niche']
     posted_ids = posted_history.get(niche_key, [])
-    unposted = [t for t in all_templates if t["id"] not in posted_ids]
 
-    if len(unposted) < 3:
-        print(f"[+] Tüm senaryolar tamamlandı, {ch['name']} için döngü taze sıfırlandı!")
-        posted_ids = []
-        unposted = list(all_templates)
+    # 1. Gemini Yapay Zekası İle %100 Benzersiz 3 Yeni Konu + FLUX Promptu Üret
+    print(f"[+] Gemini Yapay Zekası {ch['name']} İçin 3 YEPYENİ Konu ve FLUX Görsel Komutları Hazırlıyor...")
+    selected_templates = []
+    for _ in range(3):
+        try:
+            ai_data = ai_script_generator.generate_ai_topic_and_script(niche_key=niche_key, posted_history=posted_ids)
+            if ai_data:
+                selected_templates.append(ai_data)
+        except Exception as e:
+            print(f"[!] AI Konu Üretim Uyarısı: {e}")
 
-    # Randomize order so topics never repeat sequentially
-    random.shuffle(unposted)
-    selected_templates = unposted[:3]
+    if not selected_templates:
+        print(f"[!] YZ senaryo üretemedi, bu kanal atlanıyor.")
+        continue
 
     # Write selected 3 templates to active templates.json
+    templates_dst = os.path.join(BASE_DIR, "templates.json")
     with open(templates_dst, "w", encoding="utf-8") as f:
         json.dump(selected_templates, f, indent=2, ensure_ascii=False)
 
@@ -114,14 +108,14 @@ for ch in CHANNELS:
     if os.path.abspath(secrets_src) != os.path.abspath(secrets_dst):
         shutil.copyfile(secrets_src, secrets_dst)
 
-    # 1. Video Üretimi (Nişe özel ses ve nişe özel HD görseller)
-    print(f"[+] {ch['name']} için 3 Benzersiz Video Render Ediliyor...")
+    # 2. Video Üretimi (FLUX 8K AI Görselleri + Milisaniye Ses Altyazı Senkronu)
+    print(f"[+] {ch['name']} için 3 Benzersiz YZ Görselli Video Render Ediliyor...")
     try:
-        generator.main(niche_key=ch['niche'])
+        generator.main(niche_key=niche_key)
     except Exception as e:
         print(f"[!] Video üretim hatası ({ch['name']}): {e}")
 
-    # 2. Otomatik YouTube Yükleme & Yorum Sabitleme
+    # 3. Otomatik YouTube Yükleme & Dolar Linki Yorum Sabitleme
     print(f"[+] {ch['name']} YouTube Kanalına Yükleme Yapılıyor...")
     try:
         for i, t in enumerate(selected_templates):
@@ -138,6 +132,7 @@ for ch in CHANNELS:
                 success = youtube_uploader.upload_video_and_comment(video_path, metadata)
                 if success:
                     posted_ids.append(t["id"])
+                    posted_ids.append(t["title"])
     except Exception as e:
         print(f"[!] YouTube Yükleme hatası ({ch['name']}): {e}")
 
@@ -149,5 +144,5 @@ with open(HISTORY_FILE, "w", encoding="utf-8") as f:
     json.dump(posted_history, f, indent=2, ensure_ascii=False)
 
 print("\n====================================================")
-print("🎉 TEBRİKLER! 4 KANALIN TÜM BENZERSİZ VİDEOLARI ÜRETİLDİ VE YÜKLENDİ!")
+print("🎉 TEBRİKLER! 4 KANALIN TÜM YZ GÖRSELLİ BENZERSİZ VİDEOLARI ÜRETİLDİ VE YÜKLENDİ!")
 print("====================================================")
