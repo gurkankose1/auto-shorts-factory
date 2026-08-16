@@ -129,10 +129,9 @@ for ch in CHANNELS:
             }
 
             if os.path.exists(video_path):
-                success = youtube_uploader.upload_video_and_comment(video_path, metadata)
-                if success:
-                    posted_ids.append(t["id"])
-                    posted_ids.append(t["title"])
+                result = youtube_uploader.upload_video_and_comment(video_path, metadata, niche_key=niche_key)
+                if result:
+                    posted_ids.append(t["id"])  # Sadece ID kaydedilir, başlık değil
     except Exception as e:
         print(f"[!] YouTube Yükleme hatası ({ch['name']}): {e}")
 

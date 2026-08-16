@@ -79,26 +79,28 @@ CRITICAL REQUIREMENT: Return ONLY a valid JSON object without markdown code bloc
         "contents": [{"parts": [{"text": prompt}]}]
     }
 
-    try:
-        r = requests.post(url, json=payload, headers=headers, timeout=20)
-        if r.status_code == 200:
-            res_data = r.json()
-            raw_text = res_data['candidates'][0]['content']['parts'][0]['text'].strip()
-            
-            # Clean markdown formatting if present
-            if raw_text.startswith("```"):
-                raw_text = raw_text.split("```")[1]
-                if raw_text.startswith("json"):
-                    raw_text = raw_text[4:]
-            raw_text = raw_text.strip()
-            
-            script_data = json.loads(raw_text)
-            print(f"✅ AI SENARYO VE FLUX PROMPTU ÜRETİLDİ [{niche_key.upper()}]: {script_data.get('title')}")
-            return script_data
-        else:
-            print(f"❌ Gemini API Error ({r.status_code}): {r.text[:200]}")
-    except Exception as e:
-        print(f"❌ Gemini Exception: {e}")
+    for attempt in range(1, 4):
+        try:
+            print(f"[+] Gemini API Denemesi {attempt}/3...")
+            r = requests.post(url, json=payload, headers=headers, timeout=25)
+            if r.status_code == 200:
+                res_data = r.json()
+                raw_text = res_data['candidates'][0]['content']['parts'][0]['text'].strip()
+                # Clean markdown formatting if present
+                if raw_text.startswith("```"):
+                    raw_text = raw_text.split("```")[1]
+                    if raw_text.startswith("json"):
+                        raw_text = raw_text[4:]
+                raw_text = raw_text.strip()
+                script_data = json.loads(raw_text)
+                print(f"✅ AI SENARYO VE FLUX PROMPTU ÜRETİLDİ [{niche_key.upper()}]: {script_data.get('title')}")
+                return script_data
+            else:
+                print(f"❌ Gemini API Error ({r.status_code}) Deneme {attempt}: {r.text[:150]}")
+        except Exception as e:
+            print(f"❌ Gemini Exception (Deneme {attempt}): {e}")
+        if attempt < 3:
+            time.sleep(attempt * 3)
 
     # Safe fallback if API transient glitch
     fallback_id = f"{niche_key}_fb_{int(time.time())}"
