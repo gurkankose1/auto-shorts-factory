@@ -16,7 +16,6 @@ if hasattr(sys.stdout, 'reconfigure'):
 # Decode API key at runtime to bypass plain-text secret protection scanning on GitHub
 _KEY_B64 = "QVEuQWI4Uk42STBfam45MFNnYWNIdWVzLUlmWS10R1FuRElRNkpyNThhYzhGam5vNTE1dw=="
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", base64.b64decode(_KEY_B64).decode())
-GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
 
 PROMPT_SYSTEM_TEMPLATES = {
     "stoic": {
@@ -50,7 +49,6 @@ def generate_ai_topic_and_script(niche_key="stoic", posted_history=None):
         posted_history = []
     
     config = PROMPT_SYSTEM_TEMPLATES.get(niche_key, PROMPT_SYSTEM_TEMPLATES["stoic"])
-    
     history_str = ", ".join(posted_history[-15:]) if posted_history else "None yet"
     
     prompt = f"""
@@ -71,6 +69,8 @@ CRITICAL REQUIREMENT: Return ONLY a valid JSON object without markdown code bloc
 6. "image_prompt": A detailed, hyper-realistic 8K 9:16 vertical prompt for FLUX AI image generator matching the exact scene of the script. Focus on cinematic lighting, deep atmosphere, photorealistic detail, 8k resolution, vertical 9:16 ratio. Do not mention text in the image.
 """
 
+    # Dual authentication: URL key parameter + X-goog-api-key header for 100% compatibility
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
     headers = {
         "Content-Type": "application/json",
         "X-goog-api-key": GEMINI_API_KEY
@@ -81,7 +81,7 @@ CRITICAL REQUIREMENT: Return ONLY a valid JSON object without markdown code bloc
     }
 
     try:
-        r = requests.post(GEMINI_URL, json=payload, headers=headers, timeout=20)
+        r = requests.post(url, json=payload, headers=headers, timeout=20)
         if r.status_code == 200:
             res_data = r.json()
             raw_text = res_data['candidates'][0]['content']['parts'][0]['text'].strip()
