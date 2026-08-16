@@ -20,26 +20,30 @@ PROMPT_SYSTEM_TEMPLATES = {
     "stoic": {
         "niche_name": "Stoic Mindset & Philosophy",
         "affiliate_link": "https://www.digistore24.com/redir/474112/gurkankose/",
-        "affiliate_cta": "Shield Master Your Mindset & Build Unshakeable Discipline Here ->",
-        "style_guide": "Marcus Aurelius, Seneca, Epictetus quotes and practical modern stoic discipline advice. Ultra-engaging, emotionally powerful."
+        "affiliate_cta": "🛡️ Master Your Mindset & Build Unshakeable Discipline Here 👉",
+        "style_guide": "Marcus Aurelius, Seneca, Epictetus quotes and practical modern stoic discipline advice. Ultra-engaging, emotionally powerful.",
+        "call_to_action_audio": "Check the pinned comment below to get your discipline guide and transform your life today."
     },
     "bible": {
         "niche_name": "Catholic & Bible Faith Devotional",
         "affiliate_link": "https://www.digistore24.com/redir/474112/gurkankose/",
-        "affiliate_cta": "Dove Claim Your Spiritual Growth & Devotional Guide Here ->",
-        "style_guide": "Inspiring Bible verses, divine strength, faith in difficult times, prayer. Uplifting and sacred."
+        "affiliate_cta": "🕊️ Claim Your Spiritual Growth & Devotional Guide Here 👉",
+        "style_guide": "Inspiring Bible verses, divine strength, faith in difficult times, prayer. Uplifting and sacred.",
+        "call_to_action_audio": "Check the pinned comment below to get your devotional guide and transform your spiritual life today."
     },
     "health": {
         "niche_name": "Keto Diet & Rapid Fat Loss Health Hacks",
         "affiliate_link": "https://www.digistore24.com/redir/283755/gurkankose/",
-        "affiliate_cta": "Avocado Get Your Custom Keto Diet Plan & Weight Loss Guide Here ->",
-        "style_guide": "Fast metabolism secrets, intermittent fasting tips, low carb superfoods, body transformation. Science-backed, punchy."
+        "affiliate_cta": "🥑 Get Your Custom Keto Diet Plan & Weight Loss Guide Here 👉",
+        "style_guide": "Fast metabolism secrets, intermittent fasting tips, low carb superfoods, body transformation. Science-backed, punchy.",
+        "call_to_action_audio": "Check the pinned comment below to get your custom keto plan and change your life today."
     },
     "kids": {
         "niche_name": "Bedtime Stories & Magical Fairy Tales for Kids",
         "affiliate_link": "https://www.digistore24.com/redir/474112/gurkankose/",
-        "affiliate_cta": "Moon Explore Beautiful Children Bedtime Storybooks & Activity Guides ->",
-        "style_guide": "Cozy, cute, educational bedtime stories about brave little animals and twinkling stars. Warm and magical tone."
+        "affiliate_cta": "🌙 Explore Beautiful Children Bedtime Storybooks & Activity Guides 👉",
+        "style_guide": "Cozy, cute, educational bedtime stories about brave little animals and twinkling stars. Warm and magical tone.",
+        "call_to_action_audio": "Check the pinned comment below for magical storybooks and fun activity guides for your kids."
     }
 }
 
@@ -51,21 +55,29 @@ def generate_ai_topic_and_script(niche_key="stoic", posted_history=None):
     history_str = ", ".join(posted_history[-20:]) if posted_history else "None yet"
 
     prompt = f"""You are an expert YouTube Shorts creator for the '{config['niche_name']}' niche.
-Generate a completely UNIQUE, highly viral 30-second video script with an 8K AI image prompt.
+Generate a completely UNIQUE, highly viral 30-35 second video script.
 
 PREVIOUSLY USED TOPICS (DO NOT REPEAT THESE):
 {history_str}
 
 Style: {config['style_guide']}
 
-Return ONLY a valid JSON object with exactly these 6 fields (no markdown, no code blocks):
+CRITICAL RULES:
+- script_body MUST be 75-95 words (~30-35 seconds of voiceover).
+- Start with a powerful emotional hook in the first sentence.
+- Build tension, wisdom or curiosity in the middle.
+- The VERY LAST SENTENCE of script_body MUST be a call to action directing viewers to check the pinned comment to get the guide/book and transform their life (e.g., "{config['call_to_action_audio']}").
+- video_search_query should be 3-4 words describing a dramatic visual scene matching the script for Pexels search.
+
+Return ONLY a valid JSON object with exactly these 7 fields (no markdown, no code blocks):
 {{
   "id": "{niche_key}_ai_{int(time.time())}_{random.randint(100,999)}",
   "title": "A viral YouTube Shorts title with emojis and #shorts hashtag",
-  "caption_title": "3-5 WORD UPPERCASE BANNER (e.g. STOIC MORNING RULES)",
-  "script_body": "A compelling 55-65 word voiceover (~30 seconds) - emotionally gripping, starts with a hook",
+  "caption_title": "3-5 WORD UPPERCASE BANNER",
+  "script_body": "75-95 WORDS. Emotionally gripping script ending with the pinned comment call-to-action.",
+  "video_search_query": "3-4 word Pexels video search query matching the scene",
   "pinned_comment": "{config['affiliate_cta']} {config['affiliate_link']}",
-  "image_prompt": "Hyper-realistic cinematic 8K vertical 9:16 image prompt matching the script scene. Photorealistic, dramatic lighting, no text in image"
+  "image_prompt": "Hyper-realistic cinematic 8K vertical 9:16 image prompt matching the script"
 }}"""
 
     headers = {
@@ -92,6 +104,13 @@ Return ONLY a valid JSON object with exactly these 6 fields (no markdown, no cod
                         raw_text = raw_text[4:]
                 raw_text = raw_text.strip()
                 script_data = json.loads(raw_text)
+                
+                # CTA kontrolü — eğer sonda CTA cümlesi yoksa ekle
+                body = script_data.get("script_body", "").strip()
+                if "pinned comment" not in body.lower() and "comment" not in body.lower():
+                    body += " " + config["call_to_action_audio"]
+                    script_data["script_body"] = body
+
                 print(f"✅ GROQ AI SENARYO URETILDI [{niche_key.upper()}]: {script_data.get('title')}")
                 return script_data
             else:
@@ -108,10 +127,10 @@ Return ONLY a valid JSON object with exactly these 6 fields (no markdown, no cod
     print(f"[!] Groq basarisiz, fallback kullaniliyor: {fallback_id}")
 
     fallback_scripts = {
-        "stoic": "The ancient stoics knew one truth above all others. Your mind is the only thing truly yours. Every morning you wake up, you have a choice — to react like a slave to emotion, or to respond like a master of reason. Control what you can. Release what you cannot. That is the stoic way. That is the path to real power.",
-        "bible": "In your darkest hour, when you feel lost and alone, remember this. You are never truly abandoned. The same God who created the stars and the oceans knows your name. He counts every tear you cry. Every storm you face has a purpose. Hold on to your faith. Your breakthrough is closer than you think. Trust in Him completely.",
-        "health": "Most people spend years trying every diet and failing. Here is the truth the food industry hides from you. Your body is not broken. Your metabolism is not your enemy. When you cut the sugar, eliminate the processed carbs, and fuel yourself with real whole foods, your body begins to heal itself. The transformation starts in your next meal.",
-        "kids": "Once upon a time, in a forest full of glowing fireflies and whispering trees, there lived a little fox named Ember who was afraid of the dark. But one magical night, Ember discovered that the darkness was not scary at all. It was simply where the stars came out to play. And from that night on, Ember never feared the night again."
+        "stoic": "The ancient stoics knew one truth above all others. Your mind is the only thing truly yours. Every morning you wake up, you have a choice — to react like a slave to emotion, or to respond like a master of reason. Control what you can. Release what you cannot. That is the stoic way. " + config["call_to_action_audio"],
+        "bible": "In your darkest hour, when you feel lost and alone, remember this. You are never truly abandoned. The same God who created the stars and the oceans knows your name. He counts every tear you cry. Every storm you face has a purpose. Hold on to your faith. " + config["call_to_action_audio"],
+        "health": "Most people spend years trying every diet and failing. Here is the truth the food industry hides from you. Your body is not broken. Your metabolism is not your enemy. When you cut the sugar and fuel yourself with real whole foods, your body heals. " + config["call_to_action_audio"],
+        "kids": "Once upon a time, in a forest full of glowing fireflies and whispering trees, there lived a little fox named Ember who discovered that the darkness was just where the stars come out to play. " + config["call_to_action_audio"]
     }
 
     return {
@@ -119,8 +138,9 @@ Return ONLY a valid JSON object with exactly these 6 fields (no markdown, no cod
         "title": f"The Ultimate {niche_key.capitalize()} Secret #shorts",
         "caption_title": f"{niche_key.upper()} WISDOM",
         "script_body": fallback_scripts.get(niche_key, fallback_scripts["stoic"]),
+        "video_search_query": "dramatic nature landscape",
         "pinned_comment": f"{config['affiliate_cta']} {config['affiliate_link']}",
-        "image_prompt": f"Cinematic dramatic photorealistic 8k vertical 9:16 image representing {niche_key} mindset, moody atmospheric lighting, ultra detailed, award winning photography"
+        "image_prompt": f"Cinematic dramatic photorealistic 8k vertical 9:16 image representing {niche_key} mindset, moody atmospheric lighting, ultra detailed"
     }
 
 if __name__ == "__main__":

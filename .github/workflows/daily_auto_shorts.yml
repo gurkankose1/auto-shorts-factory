@@ -53,6 +53,7 @@ jobs:
       - name: Run Multi-Channel Cloud Pipeline
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
         run: python run_all_channels_cloud.py
 
       - name: Commit and Push Updated History to GitHub Repo
