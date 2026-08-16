@@ -26,7 +26,7 @@ PROMPT_SYSTEM_TEMPLATES = {
     },
     "bible": {
         "niche_name": "Catholic & Bible Faith Devotional",
-        "affiliate_link": "https://www.digistore24.com/redir/474112/gurkankose/",
+        "affiliate_link": "https://www.digistore24.com/redir/651840/gurkankose/",
         "affiliate_cta": "🕊️ Claim Your Spiritual Growth & Devotional Guide Here 👉",
         "style_guide": "Inspiring Bible verses, divine strength, faith in difficult times, prayer. Uplifting and sacred.",
         "call_to_action_audio": "Check the pinned comment below to get your devotional guide and transform your spiritual life today."
@@ -40,8 +40,8 @@ PROMPT_SYSTEM_TEMPLATES = {
     },
     "kids": {
         "niche_name": "Bedtime Stories & Magical Fairy Tales for Kids",
-        "affiliate_link": "https://www.digistore24.com/redir/474112/gurkankose/",
-        "affiliate_cta": "🌙 Explore Beautiful Children Bedtime Storybooks & Activity Guides 👉",
+        "affiliate_link": "https://www.checkout-ds24.com/redir/698913/gurkankose/",
+        "affiliate_cta": "🌙 Explore Beautiful Children Storybooks & Activity Guides 👉",
         "style_guide": "Cozy, cute, educational bedtime stories about brave little animals and twinkling stars. Warm and magical tone.",
         "call_to_action_audio": "Check the pinned comment below for magical storybooks and fun activity guides for your kids."
     }
@@ -110,6 +110,9 @@ Return ONLY a valid JSON object with exactly these 7 fields (no markdown, no cod
                 if "pinned comment" not in body.lower() and "comment" not in body.lower():
                     body += " " + config["call_to_action_audio"]
                     script_data["script_body"] = body
+
+                # Pinned comment linkini garantile
+                script_data["pinned_comment"] = f"{config['affiliate_cta']} {config['affiliate_link']}"
 
                 print(f"✅ GROQ AI SENARYO URETILDI [{niche_key.upper()}]: {script_data.get('title')}")
                 return script_data
