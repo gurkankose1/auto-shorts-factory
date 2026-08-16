@@ -106,13 +106,21 @@ Return ONLY a valid JSON object with exactly these 6 fields (no markdown, no cod
     # Fallback
     fallback_id = f"{niche_key}_fb_{int(time.time())}"
     print(f"[!] Groq basarisiz, fallback kullaniliyor: {fallback_id}")
+
+    fallback_scripts = {
+        "stoic": "The ancient stoics knew one truth above all others. Your mind is the only thing truly yours. Every morning you wake up, you have a choice — to react like a slave to emotion, or to respond like a master of reason. Control what you can. Release what you cannot. That is the stoic way. That is the path to real power.",
+        "bible": "In your darkest hour, when you feel lost and alone, remember this. You are never truly abandoned. The same God who created the stars and the oceans knows your name. He counts every tear you cry. Every storm you face has a purpose. Hold on to your faith. Your breakthrough is closer than you think. Trust in Him completely.",
+        "health": "Most people spend years trying every diet and failing. Here is the truth the food industry hides from you. Your body is not broken. Your metabolism is not your enemy. When you cut the sugar, eliminate the processed carbs, and fuel yourself with real whole foods, your body begins to heal itself. The transformation starts in your next meal.",
+        "kids": "Once upon a time, in a forest full of glowing fireflies and whispering trees, there lived a little fox named Ember who was afraid of the dark. But one magical night, Ember discovered that the darkness was not scary at all. It was simply where the stars came out to play. And from that night on, Ember never feared the night again."
+    }
+
     return {
         "id": fallback_id,
         "title": f"The Ultimate {niche_key.capitalize()} Secret #shorts",
-        "caption_title": f"{niche_key.upper()} SECRETS",
-        "script_body": f"Discover the timeless wisdom of {niche_key}. Take control of your daily habits, focus on what matters, and unlock your true potential. The journey starts now.",
+        "caption_title": f"{niche_key.upper()} WISDOM",
+        "script_body": fallback_scripts.get(niche_key, fallback_scripts["stoic"]),
         "pinned_comment": f"{config['affiliate_cta']} {config['affiliate_link']}",
-        "image_prompt": f"Cinematic dramatic photorealistic 8k vertical 9:16 image representing {niche_key} mindset, moody atmospheric lighting, ultra detailed"
+        "image_prompt": f"Cinematic dramatic photorealistic 8k vertical 9:16 image representing {niche_key} mindset, moody atmospheric lighting, ultra detailed, award winning photography"
     }
 
 if __name__ == "__main__":

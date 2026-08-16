@@ -1,0 +1,27 @@
+# === YOUTUBE OAuth TOKENS (Asla GitHub'a gönderilmez) ===
+token.json
+token_bible.json
+token_health.json
+token_kids.json
+
+# === CLIENT SECRETS (Asla GitHub'a gönderilmez) ===
+client_secrets.json
+client_secrets_bible.json
+client_secrets_health.json
+client_secrets_kids.json
+client_secret_*.json
+
+# === ÜRETILEN DOSYALAR ===
+output_videos/
+assets/ai_generated_images/
+assets/*.mp3
+assets/*.jpg
+__pycache__/
+*.pyc
+*.pyo
+
+# === TEST DOSYALARI ===
+test_*.mp4
+test_*.mp3
+test_*.jpg
+test_*.png

@@ -12,10 +12,10 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python 3.12
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
@@ -51,12 +51,17 @@ jobs:
           echo "$CLIENT_SECRETS_KIDS" > client_secrets_kids.json
 
       - name: Run Multi-Channel Cloud Pipeline
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python run_all_channels_cloud.py
 
       - name: Commit and Push Updated History to GitHub Repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config --global user.name "Auto-Shorts Bot"
           git config --global user.email "bot@auto-shorts.com"
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/gurkankose1/auto-shorts-factory.git
           git add posted_history.json
           git commit -m "Auto-update posted history queue [skip ci]" || echo "No changes to commit"
           git push origin main || echo "Git push skipped"
