@@ -4,6 +4,7 @@ import os
 import sys
 import time
 import random
+import re
 
 if hasattr(sys.stdout, 'reconfigure'):
     try:
@@ -11,9 +12,9 @@ if hasattr(sys.stdout, 'reconfigure'):
     except Exception:
         pass
 
-# Groq API — %100 Ucretsiz, Llama 3.3 70B, Super Hizli
+# Groq API — Super Fast groq/compound LLM
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = "groq/compound"
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 PROMPT_SYSTEM_TEMPLATES = {
@@ -54,8 +55,7 @@ def generate_ai_topic_and_script(niche_key="stoic", posted_history=None):
     config = PROMPT_SYSTEM_TEMPLATES.get(niche_key, PROMPT_SYSTEM_TEMPLATES["stoic"])
     history_str = ", ".join(posted_history[-20:]) if posted_history else "None yet"
 
-    prompt = f"""You are an expert YouTube Shorts creator for the '{config['niche_name']}' niche.
-Generate a completely UNIQUE, highly viral 30-35 second video script.
+    prompt = f"""Generate a completely UNIQUE, highly viral 30-35 second YouTube Shorts script for '{config['niche_name']}'.
 
 PREVIOUSLY USED TOPICS (DO NOT REPEAT THESE):
 {history_str}
@@ -69,7 +69,7 @@ CRITICAL RULES:
 - The VERY LAST SENTENCE of script_body MUST be a call to action directing viewers to check the pinned comment to get the guide/book and transform their life (e.g., "{config['call_to_action_audio']}").
 - video_search_query should be 3-4 words describing a dramatic visual scene matching the script for Pexels search.
 
-Return ONLY a valid JSON object with exactly these 7 fields (no markdown, no code blocks):
+Return ONLY a valid JSON object with these 7 fields:
 {{
   "id": "{niche_key}_ai_{int(time.time())}_{random.randint(100,999)}",
   "title": "A viral YouTube Shorts title with emojis and #shorts hashtag",
@@ -86,36 +86,36 @@ Return ONLY a valid JSON object with exactly these 7 fields (no markdown, no cod
     }
     payload = {
         "model": GROQ_MODEL,
-        "messages": [{"role": "user", "content": prompt}],
-        "max_tokens": 800,
-        "temperature": 0.9
+        "messages": [
+            {"role": "system", "content": "You are a YouTube Shorts creator that outputs JSON only."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.8
     }
 
     for attempt in range(1, 4):
         try:
-            print(f"[+] Groq LLM Denemesi {attempt}/3...")
-            r = requests.post(GROQ_URL, headers=headers, json=payload, timeout=30)
+            print(f"[+] Groq LLM Denemesi {attempt}/3 ({GROQ_MODEL})...")
+            r = requests.post(GROQ_URL, headers=headers, json=payload, timeout=35)
             if r.status_code == 200:
                 raw_text = r.json()['choices'][0]['message']['content'].strip()
-                # Markdown temizle
-                if "```" in raw_text:
-                    raw_text = raw_text.split("```")[1]
-                    if raw_text.startswith("json"):
-                        raw_text = raw_text[4:]
-                raw_text = raw_text.strip()
-                script_data = json.loads(raw_text)
                 
-                # CTA kontrolü — eğer sonda CTA cümlesi yoksa ekle
-                body = script_data.get("script_body", "").strip()
-                if "pinned comment" not in body.lower() and "comment" not in body.lower():
-                    body += " " + config["call_to_action_audio"]
-                    script_data["script_body"] = body
+                # Extract JSON using robust regex match
+                json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+                if json_match:
+                    script_data = json.loads(json_match.group(0))
 
-                # Pinned comment linkini garantile
-                script_data["pinned_comment"] = f"{config['affiliate_cta']} {config['affiliate_link']}"
+                    # CTA kontrolü — eğer sonda CTA cümlesi yoksa ekle
+                    body = script_data.get("script_body", "").strip()
+                    if "pinned comment" not in body.lower() and "comment" not in body.lower():
+                        body += " " + config["call_to_action_audio"]
+                        script_data["script_body"] = body
 
-                print(f"✅ GROQ AI SENARYO URETILDI [{niche_key.upper()}]: {script_data.get('title')}")
-                return script_data
+                    # Pinned comment linkini garantile
+                    script_data["pinned_comment"] = f"{config['affiliate_cta']} {config['affiliate_link']}"
+
+                    print(f"✅ GROQ AI SENARYO URETILDI [{niche_key.upper()}]: {script_data.get('title')}")
+                    return script_data
             else:
                 print(f"❌ Groq Error ({r.status_code}) Deneme {attempt}: {r.text[:150]}")
         except json.JSONDecodeError as e:

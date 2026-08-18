@@ -17,43 +17,32 @@ ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 VIDEO_CACHE_FILE = os.path.join(BASE_DIR, "used_pexels_videos.json")
 os.makedirs(ASSETS_DIR, exist_ok=True)
 
-# Her niş için çok sayıda arama terimi — maksimum çeşitlilik
+# Niş aramaları
 NICHE_QUERIES = {
     "stoic": [
         "mountain dramatic sunrise", "dark forest silhouette", "ocean waves storm dramatic",
         "fire flames dark background", "misty mountain landscape", "person silhouette sunset",
         "night sky stars milky way", "rain window dark moody", "eagle flying freedom",
         "waterfall nature dramatic", "thunderstorm lightning", "lone tree field sunset",
-        "smoke dark abstract", "wolf nature wild", "rocky cliff ocean",
-        "dark clouds dramatic sky", "sunrise mountain peak", "ancient stone ruins",
-        "river flowing nature", "fog forest mysterious"
+        "smoke dark abstract", "wolf nature wild", "rocky cliff ocean"
     ],
     "bible": [
         "church light rays", "sunset clouds heaven", "candle light dark prayer",
         "cross silhouette sunrise", "nature peaceful meadow", "dove flying sky",
         "golden hour light landscape", "misty valley morning", "water reflection calm",
-        "wheat field breeze", "lighthouse ocean hope", "rainbow after storm",
-        "forest light rays", "sunrise horizon golden", "cathedral interior light",
-        "mountain cross", "peaceful lake sunrise", "holy light nature",
-        "stars night sky peaceful", "flowing river serene"
+        "wheat field breeze", "lighthouse ocean hope", "rainbow after storm"
     ],
     "health": [
         "healthy food vegetables fresh", "running fitness motivation", "gym workout training",
         "fresh fruit morning breakfast", "nature walk green", "green smoothie healthy",
         "yoga meditation morning", "salad fresh vegetables", "water splash fresh",
-        "sunrise run jogging", "avocado healthy food", "kitchen cooking fresh",
-        "jumping fitness energy", "beach workout fitness", "cycling outdoor sport",
-        "vegetables market fresh", "athletic training outdoor", "healthy lifestyle morning",
-        "swimming fitness", "hiking nature trail"
+        "sunrise run jogging", "avocado healthy food", "kitchen cooking fresh"
     ],
     "kids": [
         "stars night sky magical", "magical forest fairy", "colorful flowers nature",
         "sunset peaceful golden", "butterfly garden", "rainbow colorful sky",
         "fireflies night magical", "meadow flowers spring", "ocean waves calm blue",
-        "snow winter magical", "autumn leaves falling", "waterfall tropical green",
-        "clouds timelapse sky", "night moon stars", "hot air balloon sky",
-        "colorful birds nature", "mushroom forest magical", "kite flying sky",
-        "dandelion wind blowing", "cherry blossom spring"
+        "snow winter magical", "autumn leaves falling", "clouds timelapse sky"
     ]
 }
 
@@ -72,7 +61,7 @@ def save_used_videos(used):
 
 def fetch_pexels_videos(query, per_page=15):
     headers = {"Authorization": PEXELS_API_KEY}
-    page = random.randint(1, 3)
+    page = random.randint(1, 5)  # 1-5 arası rastgele sayfa — taze stoklar
     params = {
         "query": query,
         "per_page": per_page,
@@ -100,8 +89,8 @@ def get_best_video_file(video):
         return None
     return sorted(candidates, key=lambda x: x.get("width", 0) * x.get("height", 0), reverse=True)[0]
 
-def download_single_video(niche_key, custom_query=None, min_duration=8, max_duration=60, exclude_ids=None):
-    """Tek bir Pexels videosu indir — daha önce kullanılanları atla"""
+def download_single_video(niche_key, custom_query=None, min_duration=5, max_duration=60, exclude_ids=None):
+    """Kullanılmamış tek bir Pexels videosu indir"""
     used = load_used_videos()
     used_ids = set(used.get(niche_key, []))
     if exclude_ids:
@@ -115,11 +104,8 @@ def download_single_video(niche_key, custom_query=None, min_duration=8, max_dura
     queries += niche_q
 
     for query in queries:
-        print(f"   [Pexels] Aranıyor: '{query}'")
         videos = fetch_pexels_videos(query)
-
-        suitable = []
-        short_candidates = []
+        candidates = []
         for v in videos:
             vid_id = str(v["id"])
             duration = v.get("duration", 0)
@@ -129,11 +115,8 @@ def download_single_video(niche_key, custom_query=None, min_duration=8, max_dura
             if not best_file:
                 continue
             if min_duration <= duration <= max_duration:
-                suitable.append((v, best_file))
-            elif duration >= 8:
-                short_candidates.append((v, best_file))
+                candidates.append((v, best_file))
 
-        candidates = suitable if suitable else short_candidates
         if not candidates:
             continue
 
@@ -142,28 +125,20 @@ def download_single_video(niche_key, custom_query=None, min_duration=8, max_dura
         duration = chosen_video["duration"]
         video_url = chosen_file["link"]
 
-        print(f"   ✅ Seçildi: ID={vid_id} | {duration}s | {chosen_file.get('width')}x{chosen_file.get('height')}")
-
         output_path = os.path.join(ASSETS_DIR, f"bg_{niche_key}_{vid_id}.mp4")
 
         if not os.path.exists(output_path):
             try:
-                r = requests.get(video_url, stream=True, timeout=90)
+                r = requests.get(video_url, stream=True, timeout=60)
                 if r.status_code == 200:
                     with open(output_path, "wb") as f:
                         for chunk in r.iter_content(chunk_size=16384):
                             f.write(chunk)
-                    print(f"   ✅ İndirildi: {output_path}")
                 else:
-                    print(f"   ❌ İndirme hatası: {r.status_code}")
                     continue
-            except Exception as e:
-                print(f"   ❌ İndirme exception: {e}")
+            except Exception:
                 continue
-        else:
-            print(f"   [+] Cache'den kullanılıyor: {output_path}")
 
-        # ID kaydet
         if niche_key not in used:
             used[niche_key] = []
         if vid_id not in used[niche_key]:
@@ -176,50 +151,29 @@ def download_single_video(niche_key, custom_query=None, min_duration=8, max_dura
 
     return None, 0, None
 
-
-def download_two_pexels_videos(niche_key, custom_query=None):
+def download_segment_videos(niche_key, segment_queries=None, target_count=4):
     """
-    2 FARKLI video indir — birleştirilince 25-40 saniyelik arka plan garantisi.
-    İkinci video farklı bir sorgudan gelir.
+    Videoda her 5-7 saniyede bir ekranın değişmesi için 3-5 FARKLI Pexels stok videosu indirir!
+    Cümle bazlı dinamik görsel geçişi (Multi-Clip Sentence Match).
     """
-    print(f"[+] {niche_key.upper()} için 2 Pexels videosu aranıyor...")
-
-    # 1. Video
-    path1, dur1, id1 = download_single_video(
-        niche_key,
-        custom_query=custom_query,
-        min_duration=8,
-        max_duration=40
-    )
-
-    # 2. Video — farklı ID olsun
-    exclude = {id1} if id1 else set()
-    path2, dur2, id2 = download_single_video(
-        niche_key,
-        custom_query=None,  # Farklı sorgu için custom_query kullanma
-        min_duration=8,
-        max_duration=40,
-        exclude_ids=exclude
-    )
-
+    print(f"[+] {niche_key.upper()} için cümle bazlı {target_count} farklı stok video indiriliyor...")
     results = []
-    total = 0
-    if path1:
-        results.append((path1, dur1))
-        total += dur1
-    if path2:
-        results.append((path2, dur2))
-        total += dur2
+    used_in_this_run = set()
 
-    print(f"[+] Toplam arka plan süresi: {total:.1f}s ({len(results)} video)")
-    return results, total
+    queries = segment_queries if segment_queries else []
+    
+    # 4 video tamamlanana kadar indir
+    for i in range(target_count):
+        q = queries[i] if i < len(queries) else None
+        path, dur, vid_id = download_single_video(niche_key, custom_query=q, exclude_ids=used_in_this_run)
+        if path and vid_id:
+            used_in_this_run.add(vid_id)
+            results.append((path, dur))
+            print(f"  ✅ Klip #{len(results)} hazır: ID={vid_id} ({dur}s)")
 
+    print(f"✅ Toplam {len(results)} dinamik video klip indirildi.")
+    return results
 
 if __name__ == "__main__":
-    print("=== Pexels 2-Video Download Test ===")
-    for niche in ["stoic", "bible", "health", "kids"]:
-        print(f"\n[TEST] {niche.upper()}")
-        videos, total = download_two_pexels_videos(niche)
-        for path, dur in videos:
-            print(f"  ✅ {path} ({dur}s)")
-        print(f"  Toplam: {total}s")
+    test_res = download_segment_videos("stoic", ["stormy mountain", "dark forest", "fire flames", "person cliff"])
+    print("Test clips count:", len(test_res))
