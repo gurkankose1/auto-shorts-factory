@@ -12,9 +12,9 @@ if hasattr(sys.stdout, 'reconfigure'):
     except Exception:
         pass
 
-# Groq API — Super Fast groq/compound LLM
+# Groq API — Çoklu Model Havuzu (Rate limit durumunda otomatik geçiş yapar)
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-GROQ_MODEL = "groq/compound"
+GROQ_MODELS = ["groq/compound", "qwen/qwen3.6-27b", "allam-2-7b"]
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 PROMPT_SYSTEM_TEMPLATES = {
@@ -52,6 +52,9 @@ def generate_ai_topic_and_script(niche_key="stoic", posted_history=None):
     if posted_history is None:
         posted_history = []
 
+    # Rate-limit (429) koruması için kısa bekleme
+    time.sleep(3)
+
     config = PROMPT_SYSTEM_TEMPLATES.get(niche_key, PROMPT_SYSTEM_TEMPLATES["stoic"])
     history_str = ", ".join(posted_history[-20:]) if posted_history else "None yet"
 
@@ -84,50 +87,52 @@ Return ONLY a valid JSON object with these 7 fields:
         "Authorization": f"Bearer {GROQ_API_KEY}",
         "Content-Type": "application/json"
     }
-    payload = {
-        "model": GROQ_MODEL,
-        "messages": [
-            {"role": "system", "content": "You are a YouTube Shorts creator that outputs JSON only."},
-            {"role": "user", "content": prompt}
-        ],
-        "temperature": 0.8
-    }
 
-    for attempt in range(1, 4):
-        try:
-            print(f"[+] Groq LLM Denemesi {attempt}/3 ({GROQ_MODEL})...")
-            r = requests.post(GROQ_URL, headers=headers, json=payload, timeout=35)
-            if r.status_code == 200:
-                raw_text = r.json()['choices'][0]['message']['content'].strip()
+    # Modeller arasında gezerek Rate Limit aşımını engelle
+    for model_name in GROQ_MODELS:
+        payload = {
+            "model": model_name,
+            "messages": [
+                {"role": "system", "content": "You are a YouTube Shorts creator that outputs JSON only."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.85
+        }
+
+        for attempt in range(1, 3):
+            try:
+                print(f"[+] Groq LLM Denemesi ({model_name} - {attempt}/2)...")
+                r = requests.post(GROQ_URL, headers=headers, json=payload, timeout=30)
                 
-                # Extract JSON using robust regex match
-                json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
-                if json_match:
-                    script_data = json.loads(json_match.group(0))
+                if r.status_code == 200:
+                    raw_text = r.json()['choices'][0]['message']['content'].strip()
+                    json_match = re.search(r'\{.*\}', raw_text, re.DOTALL)
+                    if json_match:
+                        script_data = json.loads(json_match.group(0))
 
-                    # CTA kontrolü — eğer sonda CTA cümlesi yoksa ekle
-                    body = script_data.get("script_body", "").strip()
-                    if "pinned comment" not in body.lower() and "comment" not in body.lower():
-                        body += " " + config["call_to_action_audio"]
-                        script_data["script_body"] = body
+                        # CTA kontrolü
+                        body = script_data.get("script_body", "").strip()
+                        if "pinned comment" not in body.lower() and "comment" not in body.lower():
+                            body += " " + config["call_to_action_audio"]
+                            script_data["script_body"] = body
 
-                    # Pinned comment linkini garantile
-                    script_data["pinned_comment"] = f"{config['affiliate_cta']} {config['affiliate_link']}"
-
-                    print(f"✅ GROQ AI SENARYO URETILDI [{niche_key.upper()}]: {script_data.get('title')}")
-                    return script_data
-            else:
-                print(f"❌ Groq Error ({r.status_code}) Deneme {attempt}: {r.text[:150]}")
-        except json.JSONDecodeError as e:
-            print(f"⚠️ JSON parse hatasi (Deneme {attempt}): {e}")
-        except Exception as e:
-            print(f"❌ Groq Exception (Deneme {attempt}): {e}")
-        if attempt < 3:
-            time.sleep(attempt * 2)
+                        script_data["pinned_comment"] = f"{config['affiliate_cta']} {config['affiliate_link']}"
+                        print(f"✅ GROQ AI SENARYO URETILDI [{niche_key.upper()}]: {script_data.get('title')}")
+                        return script_data
+                elif r.status_code == 429:
+                    print(f"⚠️ Groq Rate Limit (429) [{model_name}] — Bekleniyor ve sonraki modele geçiliyor...")
+                    time.sleep(5)
+                    break  # Sonraki modele geç
+                else:
+                    print(f"❌ Groq Error ({r.status_code}): {r.text[:150]}")
+            except Exception as e:
+                print(f"❌ Groq Exception: {e}")
+            
+            time.sleep(2)
 
     # Fallback
     fallback_id = f"{niche_key}_fb_{int(time.time())}"
-    print(f"[!] Groq basarisiz, fallback kullaniliyor: {fallback_id}")
+    print(f"[!] Groq modelleri meşguldü, fallback kullanılıyor: {fallback_id}")
 
     fallback_scripts = {
         "stoic": "The ancient stoics knew one truth above all others. Your mind is the only thing truly yours. Every morning you wake up, you have a choice — to react like a slave to emotion, or to respond like a master of reason. Control what you can. Release what you cannot. That is the stoic way. " + config["call_to_action_audio"],
