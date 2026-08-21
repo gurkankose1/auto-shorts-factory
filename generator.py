@@ -206,7 +206,14 @@ def create_video_from_template(template_data, index, niche_key="stoic"):
     sentence_boundaries = generate_voiceover_with_sync(template_data['script_body'], mp3_path, voice_name)
     voice_audio = AudioFileClip(mp3_path)
     audio_duration = voice_audio.duration
-    print(f"[+] Ses Suresi: {audio_duration:.2f}s")
+    
+    # KESİN SHORTS LİMİTİ: Video süresi 54.0 saniyeyi asla geçemez!
+    if audio_duration > 54.0:
+        print(f"⚠️ Ses süresi ({audio_duration:.2f}s) 54s limitini aşıyor, 54.0s'ye kırpılıp yumuşak fade-out yapılıyor!")
+        audio_duration = 54.0
+        voice_audio = voice_audio.subclipped(0, 54.0)
+
+    print(f"[+] Final Ses Suresi: {audio_duration:.2f}s")
 
     # 2. Arka Plan Fon Müziği (BGM Auto-Mixer %14 Volume)
     ensure_bgm_files()

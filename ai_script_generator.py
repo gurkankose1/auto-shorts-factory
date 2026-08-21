@@ -56,17 +56,19 @@ def generate_ai_topic_and_script(niche_key="stoic", posted_history=None):
     time.sleep(3)
 
     config = PROMPT_SYSTEM_TEMPLATES.get(niche_key, PROMPT_SYSTEM_TEMPLATES["stoic"])
-    history_str = ", ".join(posted_history[-20:]) if posted_history else "None yet"
+    # Token aşımını engellemek için son 10 geçmiş konu
+    history_str = ", ".join(posted_history[-10:]) if posted_history else "None yet"
 
-    prompt = f"""Generate a completely UNIQUE, highly viral 30-35 second YouTube Shorts script for '{config['niche_name']}'.
+    prompt = f"""Generate a completely UNIQUE, highly viral YouTube Shorts script for '{config['niche_name']}'.
 
 PREVIOUSLY USED TOPICS (DO NOT REPEAT THESE):
 {history_str}
 
 Style: {config['style_guide']}
 
-CRITICAL RULES:
-- script_body MUST be 75-95 words (~30-35 seconds of voiceover).
+STRICT DURATION & LENGTH RULES (CRITICAL FOR SHORTS):
+- script_body MUST be STRICTLY 60 to 75 words (~30 to 42 seconds of speech).
+- DO NOT exceed 75 words under any circumstances (so video is guaranteed under 55 seconds total).
 - Start with a powerful emotional hook in the first sentence.
 - Build tension, wisdom or curiosity in the middle.
 - The VERY LAST SENTENCE of script_body MUST be a call to action directing viewers to check the pinned comment to get the guide/book and transform their life (e.g., "{config['call_to_action_audio']}").
@@ -77,7 +79,7 @@ Return ONLY a valid JSON object with these 7 fields:
   "id": "{niche_key}_ai_{int(time.time())}_{random.randint(100,999)}",
   "title": "A viral YouTube Shorts title with emojis and #shorts hashtag",
   "caption_title": "3-5 WORD UPPERCASE BANNER",
-  "script_body": "75-95 WORDS. Emotionally gripping script ending with the pinned comment call-to-action.",
+  "script_body": "60-75 WORDS. Emotionally gripping script ending with the pinned comment call-to-action.",
   "video_search_query": "3-4 word Pexels video search query matching the scene",
   "pinned_comment": "{config['affiliate_cta']} {config['affiliate_link']}",
   "image_prompt": "Hyper-realistic cinematic 8K vertical 9:16 image prompt matching the script"
